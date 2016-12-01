@@ -26,12 +26,15 @@ func TestCheck(t *testing.T) {
 	indexNum := getDataIndexFromZFData(packData)
 	t.Log(indexNum)
 
-	/*
-		off := binary.LittleEndian.Uint32(packData[8:12])
-		val := binary.LittleEndian.Uint16(packData[off : off+2])
-		v := int16(val)
-		t.Log("val ", v)
-	*/
+	{
+		off := binary.LittleEndian.Uint32(packData[12:16])
+		val := binary.LittleEndian.Uint32(packData[off : off+4])
+		v := int32(val)
+		valv := int(val)
+		intv := int(v)
+		t.Log("v : ", v, " val : ", val)
+		t.Log("valv : ", valv, " intv : ", intv)
+	}
 
 	type stTest struct {
 		Int16  int16
@@ -82,10 +85,9 @@ func TestCheck(t *testing.T) {
 		t.Log(filed.Interface())
 	}
 
-	if !Hole() {
-		t.Log("this is log")
-		t.Errorf("%s", "can you show?")
-	}
+	st3 := &st2{}
+	Deserialize(st3, packData)
+
 }
 
 func fileToBytes(fileName string) ([]byte, error) {
@@ -177,6 +179,7 @@ func ds(st reflect.Value, data []byte, offset uint32, t *testing.T) {
 	i := st.Interface()
 	switch i.(type) {
 	case rune:
+		// TODO : 意味ない
 		isRune = true
 	}
 
@@ -202,11 +205,13 @@ func ds(st reflect.Value, data []byte, offset uint32, t *testing.T) {
 			b := []byte{data[offset], data[offset+1], 0, 0}
 			_v := binary.LittleEndian.Uint32(b)
 			v := rune(_v)
+			t.Log("rune ?? ", v)
 			st.Set(reflect.ValueOf(v))
 		} else {
 			// Int32 [int(4)]
 			_v := binary.LittleEndian.Uint32(data[offset : offset+4])
 			v := int32(_v)
+			t.Log(v)
 			st.Set(reflect.ValueOf(v))
 		}
 
@@ -214,6 +219,7 @@ func ds(st reflect.Value, data []byte, offset uint32, t *testing.T) {
 		// Int32 [int(4)]
 		_v := binary.LittleEndian.Uint32(data[offset : offset+4])
 		v := int(_v)
+		t.Log(v)
 		st.Set(reflect.ValueOf(v))
 
 	case reflect.Int64:
