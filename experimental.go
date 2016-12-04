@@ -135,31 +135,6 @@ func (d *deserializer) deserialize(st reflect.Value) error {
 
 	fmt.Println("--------->", st.Type())
 
-	/*
-		switch i.(type) {
-		case int16:
-			t.Log("aaaa")
-			_v := binary.LittleEndian.Uint16(data[offset : offset+2])
-			v := int16(_v)
-			i = v
-
-		case int:
-			t.Log("bbbb")
-			_v := binary.LittleEndian.Uint32(data[offset : offset+4])
-			v := int(_v)
-			i = v
-
-		}
-		return
-	*/
-	/*
-		isRune := false
-		i := st.Interface()
-		switch i.(type) {
-		case rune:
-			isRune = true
-		}
-	*/
 	if isDateTime(st) {
 		seconds := binary.LittleEndian.Uint64(d.read_s8())
 		nanos := binary.LittleEndian.Uint32(d.read_s4())
@@ -175,8 +150,6 @@ func (d *deserializer) deserialize(st reflect.Value) error {
 		_v := d.read_s1()
 		v := int8(_v)
 		st.Set(reflect.ValueOf(v))
-	// if int8
-	// todo : implement
 
 	case reflect.Int16:
 		// Int16 [short(2)]
@@ -212,47 +185,43 @@ func (d *deserializer) deserialize(st reflect.Value) error {
 		// Int64 [long(8)]
 		_v := binary.LittleEndian.Uint64(d.read_s8())
 		v := int64(_v)
-		st.Set(reflect.ValueOf(v))
-	//rv.Set(v)
+		st.SetInt(v)
 
-	case reflect.Uint8: //
+	case reflect.Uint8:
+		// byte in cSharp
 		_v := d.read_s1()
 		v := uint8(_v)
 		st.Set(reflect.ValueOf(v))
-	// if byte uint8
 
-	case reflect.Uint16: // Uint16 / Char
+	case reflect.Uint16:
+		// Uint16 / Char
 		v := binary.LittleEndian.Uint16(d.read_s2())
 		st.Set(reflect.ValueOf(v))
-	//rv.Set(v)
 
 	case reflect.Uint32:
 		v := binary.LittleEndian.Uint32(d.read_s4())
 		st.Set(reflect.ValueOf(v))
-	//rv.Set(v)
 
 	case reflect.Uint:
 		_v := binary.LittleEndian.Uint32(d.read_s4())
 		v := uint(_v)
 		st.Set(reflect.ValueOf(v))
-	//rv.Set(v)
 
 	case reflect.Uint64:
 		v := binary.LittleEndian.Uint64(d.read_s8())
 		st.SetUint(v)
-	//rv.Set(v)
 
-	case reflect.Float32: // Single
+	case reflect.Float32:
+		// Single
 		_v := binary.LittleEndian.Uint32(d.read_s4())
 		v := math.Float32frombits(_v)
 		st.Set(reflect.ValueOf(v))
-	//rv.Set(v)
 
-	case reflect.Float64: // Double
+	case reflect.Float64:
+		// Double
 		_v := binary.LittleEndian.Uint64(d.read_s8())
 		v := math.Float64frombits(_v)
 		st.Set(reflect.ValueOf(v))
-	//rv.Set(v)
 
 	case reflect.Bool:
 		b := d.read_s1()
