@@ -6,6 +6,7 @@ import (
 	"os"
 	"reflect"
 	"testing"
+	"time"
 )
 
 func TestSimple(t *testing.T) {
@@ -20,17 +21,133 @@ func TestSimple(t *testing.T) {
 		return nil
 	}
 
-	var int int
-	if err := f(&int, "Int32.pack"); err != nil {
+	errPrefixMessage := "deseliarize error : "
+
+	var int16 int16
+	if err := f(&int16, "Int16.pack"); err != nil {
 		t.Error(err)
 	}
-	if int != -32 {
-		t.Error("deseliarize error : ", int)
+	if int16 != -16 {
+		t.Error(errPrefixMessage, int16)
+	}
+
+	var Int int
+	if err := f(&Int, "Int32.pack"); err != nil {
+		t.Error(err)
+	}
+	if Int != -32 {
+		t.Error(errPrefixMessage, Int)
+	}
+
+	var Int32 int32
+	if err := f(&Int32, "Int32.pack"); err != nil {
+		t.Error(err)
+	}
+	if Int32 != -32 {
+		t.Error(errPrefixMessage, Int32)
+	}
+
+	var Int64 int64
+	if err := f(&Int64, "Int64.pack"); err != nil {
+		t.Error(err)
+	}
+	if Int64 != -64 {
+		t.Error(errPrefixMessage, Int64)
+	}
+
+	var Uint16 uint16
+	if err := f(&Uint16, "UInt16.pack"); err != nil {
+		t.Error(err)
+	}
+	if Uint16 != 16 {
+		t.Error(errPrefixMessage, Uint16)
+	}
+
+	var Uint uint
+	if err := f(&Uint, "UInt32.pack"); err != nil {
+		t.Error(err)
+	}
+	if Uint != 32 {
+		t.Error(errPrefixMessage, Uint)
+	}
+
+	var Uint32 uint32
+	if err := f(&Uint32, "UInt32.pack"); err != nil {
+		t.Error(err)
+	}
+	if Uint32 != 32 {
+		t.Error(errPrefixMessage, Uint32)
+	}
+
+	var Uint64 uint64
+	if err := f(&Uint64, "UInt64.pack"); err != nil {
+		t.Error(err)
+	}
+	if Uint64 != 64 {
+		t.Error(errPrefixMessage, Uint64)
+	}
+
+	var Float32 float32
+	if err := f(&Float32, "Single.pack"); err != nil {
+		t.Error(err)
+	}
+	if Float32 != 1.23456 {
+		t.Error(errPrefixMessage, Float32)
+	}
+
+	var Float64 float64
+	if err := f(&Float64, "Double.pack"); err != nil {
+		t.Error(err)
+	}
+	if Float64 != 2.3456789 {
+		t.Error(errPrefixMessage, Float64)
+	}
+
+	var Bool bool
+	if err := f(&Bool, "Boolean.pack"); err != nil {
+		t.Error(err)
+	}
+	if Bool != false {
+		t.Error(errPrefixMessage, Bool)
+	}
+
+	// byte
+	var Byte uint8
+	if err := f(&Byte, "Byte.pack"); err != nil {
+		t.Error(err)
+	}
+	if Byte != 255 {
+		t.Error(errPrefixMessage, Byte)
+	}
+
+	// sbyte
+	var Sbyte int8
+	if err := f(&Sbyte, "SByte.pack"); err != nil {
+		t.Error(err)
+	}
+	if Sbyte != -127 {
+		t.Error(errPrefixMessage, Sbyte)
+	}
+
+	var String string
+	if err := f(&String, "String.pack"); err != nil {
+		t.Error(err)
+	}
+	if String != "This is simple pack." {
+		t.Error(errPrefixMessage, String)
+	}
+
+	Time := time.Time{}
+	if err := f(&Time, "DateTime.pack"); err != nil {
+		t.Error(err)
+	}
+	if Time != time.Unix(1480846414, 631973000) {
+		t.Error(errPrefixMessage, Time)
 	}
 
 }
 
-func _TestCheck(t *testing.T) {
+func TestCheck(t *testing.T) {
 
 	packData, err := fileToBytes("Primitive.pack")
 	if err != nil {
@@ -52,7 +169,7 @@ func _TestCheck(t *testing.T) {
 		Int8           int8 // Sbyte
 		Char           rune
 		TimeSpan       []int
-		DateTime       []int
+		DateTime       time.Time
 		DateTimeOffset []int
 		String         string
 	}

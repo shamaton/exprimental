@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"math"
 	"reflect"
+	"time"
 )
 
 type deserializer struct {
@@ -31,15 +32,15 @@ func Deserialize(holder interface{}, data []byte) error {
 	t = t.Elem()
 
 	// Struct
-	if t.Kind() == reflect.Struct {
+	if t.Kind() == reflect.Struct && !isDateTime(t) {
 		return ds.deserializeStruct(t)
 	}
 	// Primitive?
-	if isPrimitive(t) {
-		return ds.deserialize(t)
-	}
+	//if isPrimitive(t) {
+	return ds.deserialize(t)
+	//}
 
-	return nil
+	//return nil
 }
 
 func (d *deserializer) deserializeStruct(t reflect.Value) error {
@@ -65,6 +66,15 @@ func (d *deserializer) deserializeStruct(t reflect.Value) error {
 		fmt.Println(filed.Interface())
 	}
 	return nil
+}
+
+func isDateTime(value reflect.Value) bool {
+	i := value.Interface()
+	switch i.(type) {
+	case time.Time:
+		return true
+	}
+	return false
 }
 
 func isPrimitive(value reflect.Value) bool {
@@ -150,6 +160,15 @@ func (d *deserializer) deserialize(st reflect.Value) error {
 			isRune = true
 		}
 	*/
+	if isDateTime(st) {
+		seconds := binary.LittleEndian.Uint64(d.read_s8())
+		nanos := binary.LittleEndian.Uint32(d.read_s4())
+		v := time.Unix(int64(seconds), int64(nanos))
+		//fmt.Println(int64(seconds), int64(nanos))
+		st.Set(reflect.ValueOf(v))
+
+		return nil
+	}
 
 	switch st.Kind() {
 	case reflect.Int8:
