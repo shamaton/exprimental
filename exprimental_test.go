@@ -3,48 +3,40 @@ package experimental
 import (
 	"encoding/binary"
 	"errors"
-	"math"
 	"os"
 	"reflect"
 	"testing"
 )
 
 func TestSimple(t *testing.T) {
+	f := func(i interface{}, fileName string) error {
+		d, err := fileToBytes(fileName)
+		if err != nil {
+			return err
+		}
+		if err := Deserialize(i, d); err != nil {
+			return err
+		}
+		return nil
+	}
+
+	var int int
+	if err := f(&int, "Int32.pack"); err != nil {
+		t.Error(err)
+	}
+	if int != -32 {
+		t.Error("deseliarize error : ", int)
+	}
 
 }
 
-func TestCheck(t *testing.T) {
+func _TestCheck(t *testing.T) {
 
 	packData, err := fileToBytes("Primitive.pack")
 	if err != nil {
 		t.Error(err)
 	}
 	t.Log("data size : ", len(packData))
-
-	size := getDataSizeFromZFData(packData)
-	t.Log(size)
-	indexNum := getDataIndexFromZFData(packData)
-	t.Log(indexNum)
-
-	{
-		off := binary.LittleEndian.Uint32(packData[12:16])
-		val := binary.LittleEndian.Uint32(packData[off : off+4])
-		v := int32(val)
-		valv := int(val)
-		intv := int(v)
-		t.Log("v : ", v, " val : ", val)
-		t.Log("valv : ", valv, " intv : ", intv)
-	}
-
-	type stTest struct {
-		Int16  int16
-		Rune   rune
-		Byte   byte
-		Int8   int8
-		String string
-	}
-	st := stTest{}
-	cconv(st, t)
 
 	type st2 struct {
 		Int16          int16
@@ -63,26 +55,6 @@ func TestCheck(t *testing.T) {
 		DateTime       []int
 		DateTimeOffset []int
 		String         string
-	}
-	stt := &st2{}
-	rv := reflect.ValueOf(stt)
-	rvst := rv.Elem()
-
-	t.Log(rv.Type())
-	t.Log(rvst.Type())
-
-	// have to be pointer
-	for i := 0; i < rvst.NumField(); i++ {
-		start := 8 + i*4
-		off := binary.LittleEndian.Uint32(packData[start : start+4])
-		filed := rvst.Field(i)
-		t.Log(filed.Type())
-		ds(filed, packData, off, t)
-	}
-
-	for i := 0; i < rvst.NumField(); i++ {
-		filed := rvst.Field(i)
-		t.Log(filed.Interface())
 	}
 
 	st3 := &st2{}
@@ -127,191 +99,6 @@ func getDataIndexFromZFData(data []byte) uint32 {
 	offset := 4
 	num := binary.LittleEndian.Uint32(data[offset : offset+4])
 	return num
-}
-
-func isPrimitive(value reflect.Value, t *testing.T) bool {
-	switch value.Kind() {
-	case
-		reflect.Int,
-		reflect.Int8,
-		reflect.Int16,
-		reflect.Int32,
-		reflect.Int64,
-		reflect.Uint,
-		reflect.Uint8,
-		reflect.Uint16,
-		reflect.Uint32,
-		reflect.Uint64,
-		reflect.Float32,
-		reflect.Float64,
-		reflect.Bool,
-		reflect.String:
-		// TODO : datetime etc...
-		return true
-	}
-	return false
-}
-
-// deserialize
-func ds(st reflect.Value, data []byte, offset uint32, t *testing.T) {
-
-	t.Log("-----------------ds-------------------")
-	t.Log(st.Type())
-
-	/*
-		switch i.(type) {
-		case int16:
-			t.Log("aaaa")
-			_v := binary.LittleEndian.Uint16(data[offset : offset+2])
-			v := int16(_v)
-			i = v
-
-		case int:
-			t.Log("bbbb")
-			_v := binary.LittleEndian.Uint32(data[offset : offset+4])
-			v := int(_v)
-			i = v
-
-		}
-		return
-	*/
-	isRune := false
-	i := st.Interface()
-	switch i.(type) {
-	case rune:
-		// TODO : 意味ない
-		isRune = true
-	}
-
-	switch st.Kind() {
-	case reflect.Int8:
-		_v := data[offset]
-		v := int8(_v)
-		st.Set(reflect.ValueOf(v))
-		// if int8
-	// todo : implement
-
-	case reflect.Int16:
-		// Int16 [short(2)]
-		_v := binary.LittleEndian.Uint16(data[offset : offset+2])
-		v := int16(_v)
-		st.Set(reflect.ValueOf(v))
-
-	case reflect.Int32:
-		// TODO : if rune
-
-		if isRune {
-			// rune [ushort(2)]
-			b := []byte{data[offset], data[offset+1], 0, 0}
-			_v := binary.LittleEndian.Uint32(b)
-			v := rune(_v)
-			t.Log("rune ?? ", v)
-			st.Set(reflect.ValueOf(v))
-		} else {
-			// Int32 [int(4)]
-			_v := binary.LittleEndian.Uint32(data[offset : offset+4])
-			v := int32(_v)
-			t.Log(v)
-			st.Set(reflect.ValueOf(v))
-		}
-
-	case reflect.Int:
-		// Int32 [int(4)]
-		_v := binary.LittleEndian.Uint32(data[offset : offset+4])
-		v := int(_v)
-		t.Log(v)
-		st.Set(reflect.ValueOf(v))
-
-	case reflect.Int64:
-		// Int64 [long(8)]
-		_v := binary.LittleEndian.Uint64(data[offset : offset+8])
-		v := int64(_v)
-		st.Set(reflect.ValueOf(v))
-	//rv.Set(v)
-
-	case reflect.Uint8: //
-		_v := data[offset]
-		v := uint8(_v)
-		st.Set(reflect.ValueOf(v))
-	// if byte uint8
-
-	case reflect.Uint16: // Uint16 / Char
-		v := binary.LittleEndian.Uint16(data[offset : offset+2])
-		st.Set(reflect.ValueOf(v))
-	//rv.Set(v)
-
-	case reflect.Uint32:
-		v := binary.LittleEndian.Uint32(data[offset : offset+4])
-		st.Set(reflect.ValueOf(v))
-	//rv.Set(v)
-
-	case reflect.Uint:
-		_v := binary.LittleEndian.Uint32(data[offset : offset+4])
-		v := uint(_v)
-		st.Set(reflect.ValueOf(v))
-	//rv.Set(v)
-
-	case reflect.Uint64:
-		v := binary.LittleEndian.Uint64(data[offset : offset+8])
-		st.SetUint(v)
-	//rv.Set(v)
-
-	case reflect.Float32: // Single
-		_v := binary.LittleEndian.Uint32(data[offset : offset+4])
-		v := math.Float32frombits(_v)
-		st.Set(reflect.ValueOf(v))
-	//rv.Set(v)
-
-	case reflect.Float64: // Double
-		_v := binary.LittleEndian.Uint64(data[offset : offset+8])
-		v := math.Float64frombits(_v)
-		st.Set(reflect.ValueOf(v))
-	//rv.Set(v)
-
-	case reflect.Bool:
-		b := data[offset : offset+1]
-		if b[0] == 0x01 {
-			st.SetBool(true)
-		} else if b[0] == 0x00 {
-			st.SetBool(false)
-		}
-
-	case reflect.String:
-		l := binary.LittleEndian.Uint32(data[offset : offset+4])
-		end := uint32(offset+4) + l
-		v := string(data[offset+4 : end])
-		st.SetString(v)
-
-	case reflect.Struct:
-		t.Log("this is struct")
-		t.Log(st.NumField())
-
-		for i := 0; i < st.NumField(); i++ {
-			v := st.Field(i)
-			cconv(v.Interface(), t)
-		}
-
-	case reflect.Slice, reflect.Array:
-		t.Log("this is slice array")
-	/*
-		var v []interface{}
-		for i := 0; i < rv.Len(); i++ {
-			iFace := rv.Index(i).Interface()
-			if iFace != nil {
-				v = append(v, mapping(iFace))
-			}
-		}
-		mv = v
-		return mv
-	*/
-
-	case reflect.Map:
-		t.Log("this is map")
-
-	default:
-		t.Log("unknown....")
-	}
-
 }
 
 // disp debug

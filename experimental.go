@@ -34,7 +34,10 @@ func Deserialize(holder interface{}, data []byte) error {
 	if t.Kind() == reflect.Struct {
 		return ds.deserializeStruct(t)
 	}
-	// primitive?
+	// Primitive?
+	if isPrimitive(t) {
+		return ds.deserialize(t)
+	}
 
 	return nil
 }
@@ -62,6 +65,29 @@ func (d *deserializer) deserializeStruct(t reflect.Value) error {
 		fmt.Println(filed.Interface())
 	}
 	return nil
+}
+
+func isPrimitive(value reflect.Value) bool {
+	switch value.Kind() {
+	case
+		reflect.Int,
+		reflect.Int8,
+		reflect.Int16,
+		reflect.Int32,
+		reflect.Int64,
+		reflect.Uint,
+		reflect.Uint8,
+		reflect.Uint16,
+		reflect.Uint32,
+		reflect.Uint64,
+		reflect.Float32,
+		reflect.Float64,
+		reflect.Bool,
+		reflect.String:
+		// TODO : datetime etc...
+		return true
+	}
+	return false
 }
 
 func Serialize(holder interface{}) ([]byte, error) {
@@ -95,7 +121,7 @@ func (d *deserializer) addOffset(add uint32) {
 	d.offset += add
 }
 
-func (d *deserializer) deserialize(st reflect.Value) {
+func (d *deserializer) deserialize(st reflect.Value) error {
 
 	fmt.Println("--------->", st.Type())
 
@@ -116,12 +142,14 @@ func (d *deserializer) deserialize(st reflect.Value) {
 		}
 		return
 	*/
-	isRune := false
-	i := st.Interface()
-	switch i.(type) {
-	case rune:
-		isRune = true
-	}
+	/*
+		isRune := false
+		i := st.Interface()
+		switch i.(type) {
+		case rune:
+			isRune = true
+		}
+	*/
 
 	switch st.Kind() {
 	case reflect.Int8:
@@ -139,17 +167,18 @@ func (d *deserializer) deserialize(st reflect.Value) {
 
 	case reflect.Int32:
 		// TODO : if rune
-
-		if isRune {
-			// rune [ushort(2)]
-			b := []byte{d.data[d.offset], d.data[d.offset+1], 0, 0}
-			_v := binary.LittleEndian.Uint32(b)
-			v := rune(_v)
-			st.Set(reflect.ValueOf(v))
-		} else {
+		/*
+			if isRune {
+				// rune [ushort(2)]
+				b := []byte{d.data[d.offset], d.data[d.offset+1], 0, 0}
+				_v := binary.LittleEndian.Uint32(b)
+				v := rune(_v)
+				st.Set(reflect.ValueOf(v))
+			} else*/
+		{
 			// Int32 [int(4)]
 			_v := binary.LittleEndian.Uint32(d.read_s4())
-			v := int32(_v)
+			v := int32(int32(_v))
 			st.Set(reflect.ValueOf(v))
 		}
 
@@ -251,4 +280,6 @@ func (d *deserializer) deserialize(st reflect.Value) {
 	default:
 		//t.Log("unknown....")
 	}
+
+	return nil
 }
