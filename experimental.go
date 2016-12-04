@@ -9,8 +9,7 @@ import (
 )
 
 type deserializer struct {
-	data   []byte
-	offset uint32
+	data []byte
 }
 
 func createDeserializer(data []byte) *deserializer {
@@ -37,7 +36,7 @@ func Deserialize(holder interface{}, data []byte) error {
 	}
 	// Primitive?
 	//if isPrimitive(t) {
-	return ds.deserialize(t)
+	return ds.deserialize(t, 0)
 	//}
 
 	//return nil
@@ -49,7 +48,8 @@ func (d *deserializer) deserializeStruct(t reflect.Value) error {
 		return fmt.Errorf("data size is not enough: %s", dataLen)
 	}
 	// size
-	size := binary.LittleEndian.Uint32(d.read_s4())
+	b, _ := d.read_s4(0)
+	size := binary.LittleEndian.Uint32(b)
 	if size != uint32(dataLen) {
 		return fmt.Errorf("data size is wrong [%s != %s]", size, dataLen)
 	}
@@ -59,9 +59,9 @@ func (d *deserializer) deserializeStruct(t reflect.Value) error {
 
 	for i := 0; i < t.NumField(); i++ {
 		indexOffset := 8 + i*4
-		d.offset = binary.LittleEndian.Uint32(d.data[indexOffset : indexOffset+4])
+		dataOffset := binary.LittleEndian.Uint32(d.data[indexOffset : indexOffset+4])
 		filed := t.Field(i)
-		d.deserialize(filed)
+		d.deserialize(filed, dataOffset)
 
 		fmt.Println(filed.Interface())
 	}
@@ -104,40 +104,35 @@ func Serialize(holder interface{}) ([]byte, error) {
 	return []byte(""), nil
 }
 
-func (d *deserializer) read_s1() byte {
-	defer d.addOffset(1)
-	return d.data[d.offset]
+func (d *deserializer) read_s1(index uint32) (byte, uint32) {
+	rb := uint32(1)
+	return d.data[index], index + rb
 }
 
-func (d *deserializer) read_s2() []byte {
+func (d *deserializer) read_s2(index uint32) ([]byte, uint32) {
 	rb := uint32(2)
-	defer d.addOffset(rb)
-	return d.data[d.offset : d.offset+rb]
+	return d.data[index : index+rb], index + rb
 }
 
-func (d *deserializer) read_s4() []byte {
+func (d *deserializer) read_s4(index uint32) ([]byte, uint32) {
 	rb := uint32(4)
-	defer d.addOffset(rb)
-	return d.data[d.offset : d.offset+rb]
+	return d.data[index : index+rb], index + rb
 }
 
-func (d *deserializer) read_s8() []byte {
+func (d *deserializer) read_s8(index uint32) ([]byte, uint32) {
 	rb := uint32(8)
-	defer d.addOffset(rb)
-	return d.data[d.offset : d.offset+rb]
+	return d.data[index : index+rb], index + rb
 }
 
-func (d *deserializer) addOffset(add uint32) {
-	d.offset += add
-}
-
-func (d *deserializer) deserialize(st reflect.Value) error {
+func (d *deserializer) deserialize(st reflect.Value, offset uint32) error {
 
 	fmt.Println("--------->", st.Type())
 
 	if isDateTime(st) {
-		seconds := binary.LittleEndian.Uint64(d.read_s8())
-		nanos := binary.LittleEndian.Uint32(d.read_s4())
+		b, offset := d.read_s8(offset)
+		seconds := binary.LittleEndian.Uint64(b)
+		b, _ = d.read_s4(offset)
+		nanos := binary.LittleEndian.Uint32(b)
 		v := time.Unix(int64(seconds), int64(nanos))
 		//fmt.Println(int64(seconds), int64(nanos))
 		st.Set(reflect.ValueOf(v))
@@ -147,13 +142,14 @@ func (d *deserializer) deserialize(st reflect.Value) error {
 
 	switch st.Kind() {
 	case reflect.Int8:
-		_v := d.read_s1()
-		v := int8(_v)
+		b, _ := d.read_s1(offset)
+		v := int8(b)
 		st.Set(reflect.ValueOf(v))
 
 	case reflect.Int16:
 		// Int16 [short(2)]
-		_v := binary.LittleEndian.Uint16(d.read_s2())
+		b, _ := d.read_s2(offset)
+		_v := binary.LittleEndian.Uint16(b)
 		v := int16(_v)
 		st.Set(reflect.ValueOf(v))
 
@@ -169,62 +165,71 @@ func (d *deserializer) deserialize(st reflect.Value) error {
 			} else*/
 		{
 			// Int32 [int(4)]
-			_v := binary.LittleEndian.Uint32(d.read_s4())
+			b, _ := d.read_s4(offset)
+			_v := binary.LittleEndian.Uint32(b)
 			v := int32(int32(_v))
 			st.Set(reflect.ValueOf(v))
 		}
 
 	case reflect.Int:
 		// Int32 [int(4)]
-		_v := binary.LittleEndian.Uint32(d.read_s4())
+		b, _ := d.read_s4(offset)
+		_v := binary.LittleEndian.Uint32(b)
 		// NOTE : double cast
 		v := int(int32(_v))
 		st.Set(reflect.ValueOf(v))
 
 	case reflect.Int64:
 		// Int64 [long(8)]
-		_v := binary.LittleEndian.Uint64(d.read_s8())
+		b, _ := d.read_s8(offset)
+		_v := binary.LittleEndian.Uint64(b)
 		v := int64(_v)
 		st.SetInt(v)
 
 	case reflect.Uint8:
 		// byte in cSharp
-		_v := d.read_s1()
+		_v, _ := d.read_s1(offset)
 		v := uint8(_v)
 		st.Set(reflect.ValueOf(v))
 
 	case reflect.Uint16:
 		// Uint16 / Char
-		v := binary.LittleEndian.Uint16(d.read_s2())
+		b, _ := d.read_s2(offset)
+		v := binary.LittleEndian.Uint16(b)
 		st.Set(reflect.ValueOf(v))
 
 	case reflect.Uint32:
-		v := binary.LittleEndian.Uint32(d.read_s4())
+		b, _ := d.read_s4(offset)
+		v := binary.LittleEndian.Uint32(b)
 		st.Set(reflect.ValueOf(v))
 
 	case reflect.Uint:
-		_v := binary.LittleEndian.Uint32(d.read_s4())
+		b, _ := d.read_s4(offset)
+		_v := binary.LittleEndian.Uint32(b)
 		v := uint(_v)
 		st.Set(reflect.ValueOf(v))
 
 	case reflect.Uint64:
-		v := binary.LittleEndian.Uint64(d.read_s8())
+		b, _ := d.read_s8(offset)
+		v := binary.LittleEndian.Uint64(b)
 		st.SetUint(v)
 
 	case reflect.Float32:
 		// Single
-		_v := binary.LittleEndian.Uint32(d.read_s4())
+		b, _ := d.read_s4(offset)
+		_v := binary.LittleEndian.Uint32(b)
 		v := math.Float32frombits(_v)
 		st.Set(reflect.ValueOf(v))
 
 	case reflect.Float64:
 		// Double
-		_v := binary.LittleEndian.Uint64(d.read_s8())
+		b, _ := d.read_s8(offset)
+		_v := binary.LittleEndian.Uint64(b)
 		v := math.Float64frombits(_v)
 		st.Set(reflect.ValueOf(v))
 
 	case reflect.Bool:
-		b := d.read_s1()
+		b, _ := d.read_s1(offset)
 		if b == 0x01 {
 			st.SetBool(true)
 		} else if b == 0x00 {
@@ -232,9 +237,9 @@ func (d *deserializer) deserialize(st reflect.Value) error {
 		}
 
 	case reflect.String:
-		l := binary.LittleEndian.Uint32(d.read_s4())
-		end := uint32(d.offset) + l
-		v := string(d.data[d.offset:end])
+		b, offset := d.read_s4(offset)
+		l := binary.LittleEndian.Uint32(b)
+		v := string(d.data[offset : offset+l])
 		st.SetString(v)
 
 	case reflect.Struct:
