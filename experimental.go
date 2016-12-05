@@ -36,7 +36,9 @@ func Deserialize(holder interface{}, data []byte) error {
 	}
 	// Primitive?
 	//if isPrimitive(t) {
-	return ds.deserialize(t, 0)
+
+	_, err := ds.deserialize(t, 0)
+	return err
 	//}
 
 	//return nil
@@ -124,34 +126,27 @@ func (d *deserializer) read_s8(index uint32) ([]byte, uint32) {
 	return d.data[index : index+rb], index + rb
 }
 
-func (d *deserializer) deserialize(st reflect.Value, offset uint32) error {
+func (d *deserializer) deserialize(st reflect.Value, offset uint32) (uint32, error) {
+	var err error
 
 	fmt.Println("--------->", st.Type())
 
-	if isDateTime(st) {
-		b, offset := d.read_s8(offset)
-		seconds := binary.LittleEndian.Uint64(b)
-		b, _ = d.read_s4(offset)
-		nanos := binary.LittleEndian.Uint32(b)
-		v := time.Unix(int64(seconds), int64(nanos))
-		//fmt.Println(int64(seconds), int64(nanos))
-		st.Set(reflect.ValueOf(v))
-
-		return nil
-	}
-
 	switch st.Kind() {
 	case reflect.Int8:
-		b, _ := d.read_s1(offset)
+		b, o := d.read_s1(offset)
 		v := int8(b)
 		st.Set(reflect.ValueOf(v))
+		// update
+		offset = o
 
 	case reflect.Int16:
 		// Int16 [short(2)]
-		b, _ := d.read_s2(offset)
+		b, o := d.read_s2(offset)
 		_v := binary.LittleEndian.Uint16(b)
 		v := int16(_v)
 		st.Set(reflect.ValueOf(v))
+		// update
+		offset = o
 
 	case reflect.Int32:
 		// TODO : if rune
@@ -165,107 +160,189 @@ func (d *deserializer) deserialize(st reflect.Value, offset uint32) error {
 			} else*/
 		{
 			// Int32 [int(4)]
-			b, _ := d.read_s4(offset)
+			b, o := d.read_s4(offset)
 			_v := binary.LittleEndian.Uint32(b)
 			v := int32(int32(_v))
 			st.Set(reflect.ValueOf(v))
+			// update
+			offset = o
 		}
 
 	case reflect.Int:
 		// Int32 [int(4)]
-		b, _ := d.read_s4(offset)
+		b, o := d.read_s4(offset)
 		_v := binary.LittleEndian.Uint32(b)
 		// NOTE : double cast
 		v := int(int32(_v))
 		st.Set(reflect.ValueOf(v))
+		// update
+		offset = o
 
 	case reflect.Int64:
 		// Int64 [long(8)]
-		b, _ := d.read_s8(offset)
+		b, o := d.read_s8(offset)
 		_v := binary.LittleEndian.Uint64(b)
 		v := int64(_v)
 		st.SetInt(v)
+		// update
+		offset = o
 
 	case reflect.Uint8:
 		// byte in cSharp
-		_v, _ := d.read_s1(offset)
+		_v, o := d.read_s1(offset)
 		v := uint8(_v)
 		st.Set(reflect.ValueOf(v))
+		// update
+		offset = o
 
 	case reflect.Uint16:
 		// Uint16 / Char
-		b, _ := d.read_s2(offset)
+		b, o := d.read_s2(offset)
 		v := binary.LittleEndian.Uint16(b)
 		st.Set(reflect.ValueOf(v))
+		// update
+		offset = o
 
 	case reflect.Uint32:
-		b, _ := d.read_s4(offset)
+		b, o := d.read_s4(offset)
 		v := binary.LittleEndian.Uint32(b)
 		st.Set(reflect.ValueOf(v))
+		// update
+		offset = o
 
 	case reflect.Uint:
-		b, _ := d.read_s4(offset)
+		b, o := d.read_s4(offset)
 		_v := binary.LittleEndian.Uint32(b)
 		v := uint(_v)
 		st.Set(reflect.ValueOf(v))
+		// update
+		offset = o
 
 	case reflect.Uint64:
-		b, _ := d.read_s8(offset)
+		b, o := d.read_s8(offset)
 		v := binary.LittleEndian.Uint64(b)
 		st.SetUint(v)
+		// update
+		offset = o
 
 	case reflect.Float32:
 		// Single
-		b, _ := d.read_s4(offset)
+		b, o := d.read_s4(offset)
 		_v := binary.LittleEndian.Uint32(b)
 		v := math.Float32frombits(_v)
 		st.Set(reflect.ValueOf(v))
+		// update
+		offset = o
 
 	case reflect.Float64:
 		// Double
-		b, _ := d.read_s8(offset)
+		b, o := d.read_s8(offset)
 		_v := binary.LittleEndian.Uint64(b)
 		v := math.Float64frombits(_v)
 		st.Set(reflect.ValueOf(v))
+		// update
+		offset = o
 
 	case reflect.Bool:
-		b, _ := d.read_s1(offset)
+		b, o := d.read_s1(offset)
 		if b == 0x01 {
 			st.SetBool(true)
 		} else if b == 0x00 {
 			st.SetBool(false)
 		}
+		// update
+		offset = o
 
 	case reflect.String:
-		b, offset := d.read_s4(offset)
+		b, o := d.read_s4(offset)
 		l := binary.LittleEndian.Uint32(b)
-		v := string(d.data[offset : offset+l])
+		v := string(d.data[o : o+l])
 		st.SetString(v)
+		// update
+		offset = o + l
 
 	case reflect.Struct:
-	/*
-		t.Log("this is struct")
-		t.Log(st.NumField())
+		if isDateTime(st) {
+			b, o1 := d.read_s8(offset)
+			seconds := binary.LittleEndian.Uint64(b)
+			b, o2 := d.read_s4(o1)
+			nanos := binary.LittleEndian.Uint32(b)
+			v := time.Unix(int64(seconds), int64(nanos))
+			//fmt.Println(int64(seconds), int64(nanos))
+			st.Set(reflect.ValueOf(v))
+			// update
+			offset = o2
+		} else {
 
-		for i := 0; i < st.NumField(); i++ {
-			v := st.Field(i)
-			cconv(v.Interface(), t)
+			/*
+				t.Log("this is struct")
+				t.Log(st.NumField())
+
+				for i := 0; i < st.NumField(); i++ {
+					v := st.Field(i)
+					cconv(v.Interface(), t)
+				}
+			*/
 		}
-	*/
 
-	case reflect.Slice, reflect.Array:
-	//t.Log("this is slice array")
-	/*
-		var v []interface{}
-		for i := 0; i < rv.Len(); i++ {
-			iFace := rv.Index(i).Interface()
-			if iFace != nil {
-				v = append(v, mapping(iFace))
+	case reflect.Slice:
+		// element type
+		e := st.Type().Elem()
+
+		// length
+		b, offset := d.read_s4(offset)
+		l := int(int32(binary.LittleEndian.Uint32(b)))
+
+		// data is null
+		if l < 0 {
+			return offset, nil
+		}
+
+		o := offset
+		tmpSlice := reflect.MakeSlice(st.Type(), l, l)
+
+		for i := 0; i < l; i++ {
+			v := reflect.New(e).Elem()
+			o, err = d.deserialize(v, o)
+			if err != nil {
+				return 0, err
 			}
+
+			tmpSlice.Index(i).Set(v)
 		}
-		mv = v
-		return mv
-	*/
+		st.Set(tmpSlice)
+
+		// update
+		offset = o
+
+	case reflect.Array:
+		// element type
+		e := st.Type().Elem()
+
+		// length
+		b, offset := d.read_s4(offset)
+		l := int(int32(binary.LittleEndian.Uint32(b)))
+
+		// data is null
+		if l < 0 {
+			return offset, nil
+		}
+		if l != st.Len() {
+			return 0, fmt.Errorf("Array Length is different : data[%d] array[%d]", l, st.Len())
+		}
+
+		o := offset
+		for i := 0; i < l; i++ {
+			v := reflect.New(e).Elem()
+			o, err = d.deserialize(v, o)
+			if err != nil {
+				return 0, err
+			}
+			st.Index(i).Set(v)
+		}
+
+		// update
+		offset = o
 
 	case reflect.Map:
 	//t.Log("this is map")
@@ -274,5 +351,5 @@ func (d *deserializer) deserialize(st reflect.Value, offset uint32) error {
 		//t.Log("unknown....")
 	}
 
-	return nil
+	return offset, err
 }

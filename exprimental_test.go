@@ -3,6 +3,7 @@ package experimental
 import (
 	"encoding/binary"
 	"errors"
+	"math"
 	"os"
 	"reflect"
 	"testing"
@@ -147,7 +148,95 @@ func TestSimple(t *testing.T) {
 
 }
 
-func TestCheck(t *testing.T) {
+func TestArray(t *testing.T) {
+
+	f := func(i interface{}, fileName string) error {
+		d, err := fileToBytes(fileName)
+		if err != nil {
+			return err
+		}
+		if err := Deserialize(i, d); err != nil {
+			return err
+		}
+		return nil
+	}
+	errSliceMessage := "slice deseliarize error : "
+	errArrayMessage := "array deseliarize error : "
+
+	IntSlice := []int{}
+	if err := f(&IntSlice, "ListInt.pack"); err != nil {
+		t.Error(err)
+	}
+	t.Log(IntSlice)
+	if !reflect.DeepEqual(IntSlice, []int{1, 2, 3, 4, 5, 6, 7, 8, 9, math.MaxInt32}) {
+		t.Error(errSliceMessage, IntSlice)
+	}
+
+	IntArr := [10]int32{}
+	if err := f(&IntArr, "ListInt.pack"); err != nil {
+		t.Error(err)
+	}
+	t.Log(IntArr)
+	if !reflect.DeepEqual(IntArr, [10]int32{1, 2, 3, 4, 5, 6, 7, 8, 9, math.MaxInt32}) {
+		t.Error(errArrayMessage, IntArr)
+	}
+
+	FloatSlice := []float32{}
+	if err := f(&FloatSlice, "ListFloat.pack"); err != nil {
+		t.Error(err)
+	}
+	t.Log(FloatSlice)
+	if !reflect.DeepEqual(FloatSlice, []float32{1.2, 3.4, 5.6, 7.8}) {
+		t.Error(errSliceMessage, FloatSlice)
+	}
+
+	FloatArray := [4]float32{}
+	if err := f(&FloatArray, "ListFloat.pack"); err != nil {
+		t.Error(err)
+	}
+	t.Log(FloatArray)
+	if !reflect.DeepEqual(FloatArray, [4]float32{1.2, 3.4, 5.6, 7.8}) {
+		t.Error(errArrayMessage, FloatArray)
+	}
+
+	StringSlice := []string{}
+	if err := f(&StringSlice, "ListString.pack"); err != nil {
+		t.Error(err)
+	}
+	t.Log(StringSlice)
+	if !reflect.DeepEqual(StringSlice, []string{"Can", "you", "see", "this", "array", "message", "?"}) {
+		t.Error(errSliceMessage, StringSlice)
+	}
+
+	StringArray := [7]string{}
+	if err := f(&StringArray, "ListString.pack"); err != nil {
+		t.Error(err)
+	}
+	t.Log(StringArray)
+	if !reflect.DeepEqual(StringArray, [7]string{"Can", "you", "see", "this", "array", "message", "?"}) {
+		t.Error(errArrayMessage, StringArray)
+	}
+
+	EmpltySlice := []uint64{}
+	if err := f(&EmpltySlice, "ListEmpty.pack"); err != nil {
+		t.Error(err)
+	}
+	t.Log(EmpltySlice)
+	if !reflect.DeepEqual(EmpltySlice, []uint64{}) {
+		t.Error(errSliceMessage, EmpltySlice)
+	}
+
+	EmpltyArray := [0]uint64{}
+	if err := f(&EmpltyArray, "ListEmpty.pack"); err != nil {
+		t.Error(err)
+	}
+	t.Log(EmpltyArray)
+	if !reflect.DeepEqual(EmpltyArray, [0]uint64{}) {
+		t.Error(errArrayMessage, EmpltyArray)
+	}
+}
+
+func _TestCheck(t *testing.T) {
 
 	packData, err := fileToBytes("Primitive.pack")
 	if err != nil {
