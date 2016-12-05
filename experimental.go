@@ -23,6 +23,8 @@ const minStructDataSize = 9
 func Deserialize(holder interface{}, data []byte) error {
 	ds := createDeserializer(data)
 
+	// todo : pointer to pointer
+
 	t := reflect.ValueOf(holder)
 	if t.Kind() != reflect.Ptr {
 		return fmt.Errorf("holder must set pointer value. but got: %t", holder)
@@ -100,10 +102,6 @@ func isPrimitive(value reflect.Value) bool {
 		return true
 	}
 	return false
-}
-
-func Serialize(holder interface{}) ([]byte, error) {
-	return []byte(""), nil
 }
 
 func (d *deserializer) read_s1(index uint32) (byte, uint32) {

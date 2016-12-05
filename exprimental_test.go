@@ -10,7 +10,7 @@ import (
 	"time"
 )
 
-func TestSimple(t *testing.T) {
+func _TestSimple(t *testing.T) {
 	f := func(i interface{}, fileName string) error {
 		d, err := fileToBytes(fileName)
 		if err != nil {
@@ -148,7 +148,22 @@ func TestSimple(t *testing.T) {
 
 }
 
-func TestArray(t *testing.T) {
+func TestSDS(t *testing.T) {
+
+	var Int int
+	aaa := 12345
+	data, err := Serialize(aaa)
+	if err != nil {
+		t.Error(err)
+	}
+	t.Log(data)
+	if err := Deserialize(&Int, data); err != nil {
+		t.Error(err)
+	}
+	t.Log(Int)
+}
+
+func _TestArray(t *testing.T) {
 
 	f := func(i interface{}, fileName string) error {
 		d, err := fileToBytes(fileName)
