@@ -23,14 +23,15 @@ const minStructDataSize = 9
 func Deserialize(holder interface{}, data []byte) error {
 	ds := createDeserializer(data)
 
-	// todo : pointer to pointer
-
 	t := reflect.ValueOf(holder)
 	if t.Kind() != reflect.Ptr {
 		return fmt.Errorf("holder must set pointer value. but got: %t", holder)
 	}
 
 	t = t.Elem()
+	if t.Kind() == reflect.Ptr {
+		t = t.Elem()
+	}
 
 	// Struct
 	if t.Kind() == reflect.Struct && !isDateTime(t) {
