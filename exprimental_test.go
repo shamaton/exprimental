@@ -3,6 +3,7 @@ package experimental
 import (
 	"encoding/binary"
 	"errors"
+	"fmt"
 	"math"
 	"os"
 	"reflect"
@@ -149,18 +150,163 @@ func _TestSimple(t *testing.T) {
 }
 
 func TestSDS(t *testing.T) {
+	f := func(in interface{}, out interface{}, isDispByte bool) error {
+		d, err := Serialize(in)
+		if err != nil {
+			return err
+		}
+		if isDispByte {
+			t.Log(in, " -- to byte --> ", d)
+		}
+		if err := Deserialize(out, d); err != nil {
+			return err
+		}
+		return nil
+	}
+	_p := func(in interface{}, out interface{}) string {
+		return fmt.Sprint("value different [in]:", in, " [out]:", out)
+	}
 
-	var Int int
-	aaa := 12345
-	data, err := Serialize(aaa)
-	if err != nil {
+	var rInt8 int8
+	vInt8 := int8(-8)
+	if err := f(vInt8, &rInt8, false); err != nil {
 		t.Error(err)
 	}
-	t.Log(data)
-	if err := Deserialize(&Int, data); err != nil {
+	if vInt8 != rInt8 {
+		t.Error(_p(vInt8, rInt8))
+	}
+	t.Log(rInt8)
+
+	var rInt16 int16
+	vInt16 := int16(-16)
+	if err := f(vInt16, &rInt16, false); err != nil {
 		t.Error(err)
 	}
-	t.Log(Int)
+	if vInt16 != rInt16 {
+		t.Error(_p(vInt16, rInt16))
+	}
+
+	var rInt int
+	vInt := -65535
+	if err := f(vInt, &rInt, false); err != nil {
+		t.Error(err)
+	}
+	if vInt != rInt {
+		t.Error(_p(vInt, rInt))
+	}
+
+	var rInt32 int32
+	vInt32 := int32(-32)
+	if err := f(vInt32, &rInt32, false); err != nil {
+		t.Error(err)
+	}
+	if vInt32 != rInt32 {
+		t.Error(_p(vInt32, rInt32))
+	}
+
+	var rInt64 int64
+	vInt64 := int64(-64)
+	if err := f(vInt64, &rInt64, false); err != nil {
+		t.Error(err)
+	}
+	if vInt64 != rInt64 {
+		t.Error(_p(vInt64, rInt64))
+	}
+	t.Log(rInt64)
+
+	var rUint8 uint8
+	vUint8 := uint8(math.MaxUint8)
+	if err := f(vUint8, &rUint8, false); err != nil {
+		t.Error(err)
+	}
+	if vUint8 != rUint8 {
+		t.Error(_p(vUint8, rUint8))
+	}
+	t.Log(rUint8)
+
+	var rUint16 uint16
+	vUint16 := uint16(math.MaxUint16)
+	if err := f(vUint16, &rUint16, false); err != nil {
+		t.Error(err)
+	}
+	if vUint16 != rUint16 {
+		t.Error(_p(vUint16, rUint16))
+	}
+	t.Log(rUint16)
+
+	var rUint uint
+	vUint := uint(math.MaxUint32)
+	if err := f(vUint, &rUint, false); err != nil {
+		t.Error(err)
+	}
+	if vUint != rUint {
+		t.Error(_p(vUint, rUint))
+	}
+	t.Log(rUint)
+
+	var rUint32 uint32
+	vUint32 := uint32(math.MaxUint32)
+	if err := f(vUint32, &rUint32, false); err != nil {
+		t.Error(err)
+	}
+	if vUint32 != rUint32 {
+		t.Error(_p(vUint32, rUint32))
+	}
+	t.Log(rUint32)
+
+	var rUint64 uint64
+	vUint64 := uint64(math.MaxUint64)
+	if err := f(vUint64, &rUint64, false); err != nil {
+		t.Error(err)
+	}
+	if vUint64 != rUint64 {
+		t.Error(_p(vUint64, rUint64))
+	}
+	t.Log(rUint64)
+
+	var rFloat32 float32
+	vFloat32 := float32(math.MaxFloat32)
+	if err := f(vFloat32, &rFloat32, false); err != nil {
+		t.Error(err)
+	}
+	if vFloat32 != rFloat32 {
+		t.Error(_p(vFloat32, rFloat32))
+	}
+	t.Log(rFloat32)
+
+	var rFloat64 float64
+	vFloat64 := float64(math.MaxFloat64)
+	if err := f(vFloat64, &rFloat64, false); err != nil {
+		t.Error(err)
+	}
+	if vFloat64 != rFloat64 {
+		t.Error(_p(vFloat64, rFloat64))
+	}
+	t.Log(rFloat64)
+
+	/*
+		var _rUint8 int8
+		_vUint8 := int8(-8)
+		if err := f(_vUint8, &_rUint8, false); err != nil {
+			t.Error(err)
+		}
+		if _vUint8 != _rUint8 {
+			t.Error(_p(_vUint8, _rUint8))
+		}
+		t.Log(_rUint8)
+	*/
+
+	// pointer test mmmm...
+	hoge := new(int)
+	*hoge = 123
+	fuga := new(int)
+	rrrr := reflect.ValueOf(&fuga)
+	t.Log(rrrr.Type().Elem())
+	if err := f(&hoge, &fuga, false); err != nil {
+		t.Error(err)
+	}
+	t.Log(hoge, *hoge, fuga, *fuga)
+
 }
 
 func _TestArray(t *testing.T) {
@@ -417,12 +563,3 @@ func cconv(st interface{}, t *testing.T) {
 	}
 
 }
-
-/*
-func Float64bytes(float float64) []byte {
-	bits := math.Float64bits(float)
-	bytes := make([]byte, 8)
-	binary.LittleEndian.PutUint64(bytes, bits)
-	return bytes
-}
-*/
