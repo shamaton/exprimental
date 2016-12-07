@@ -303,6 +303,38 @@ func TestSDS(t *testing.T) {
 		t.Error(_p(vString, rString))
 	}
 	t.Log(rString)
+
+	// todo : more array/slice test cases
+	var rIntArr []int
+	vIntArr := []int{1, 2, 3, 4, 5, 6, 7, 8, 9, math.MinInt32}
+	if err := f(vIntArr, &rIntArr, false); err != nil {
+		t.Error(err)
+	}
+	if !reflect.DeepEqual(vIntArr, rIntArr) {
+		t.Error(_p(vIntArr, rIntArr))
+	}
+	t.Log(rIntArr)
+
+	var rStrArr []string
+	vStrArr := []string{"this", "is", "string", "array", ".", "can", "you", "see", "?"}
+	if err := f(vStrArr, &rStrArr, false); err != nil {
+		t.Error(err)
+	}
+	if !reflect.DeepEqual(vStrArr, rStrArr) {
+		t.Error(_p(vStrArr, rStrArr))
+	}
+	t.Log(rStrArr)
+
+	var rArrEmpty []string
+	vArrEmpty := []string{}
+	if err := f(vArrEmpty, &rArrEmpty, false); err != nil {
+		t.Error(err)
+	}
+	if !reflect.DeepEqual(vArrEmpty, rArrEmpty) {
+		t.Error(_p(vArrEmpty, rArrEmpty))
+	}
+	t.Log(rArrEmpty)
+
 	/*
 		var _rUint8 int8
 		_vUint8 := int8(-8)

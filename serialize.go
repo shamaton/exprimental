@@ -157,6 +157,31 @@ func (d *serializer) serialize(rv reflect.Value) []byte {
 		b = append(b, strBytes...)
 		ret = b
 
+	case reflect.Array, reflect.Slice:
+		l := rv.Len()
+		if l > 0 {
+			// first : know element size
+			fb := d.serialize(rv.Index(0))
+
+			// second : make byte array
+			size := uint32(l*len(fb)) + byte4
+			b := make([]byte, 0, size)
+
+			// third : append data
+			b = append(b, byte(l), byte(l>>8), byte(l>>16), byte(l>>24))
+			b = append(b, fb...)
+
+			for i := 1; i < l; i++ {
+				ab := d.serialize(rv.Index(i))
+				b = append(b, ab...)
+			}
+			ret = b
+		} else {
+			// only make length info
+			b := make([]byte, byte4)
+			ret = b
+		}
+
 	case reflect.Ptr:
 	case reflect.Uintptr:
 		// todo : error

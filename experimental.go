@@ -128,7 +128,7 @@ func (d *deserializer) read_s8(index uint32) ([]byte, uint32) {
 func (d *deserializer) deserialize(st reflect.Value, offset uint32) (uint32, error) {
 	var err error
 
-	fmt.Println("--------->", st.Type())
+	//fmt.Println("--------->", st.Type())
 
 	switch st.Kind() {
 	case reflect.Int8:
