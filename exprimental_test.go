@@ -284,6 +284,25 @@ func TestSDS(t *testing.T) {
 	}
 	t.Log(rFloat64)
 
+	var rBool bool
+	vBool := true
+	if err := f(vBool, &rBool, false); err != nil {
+		t.Error(err)
+	}
+	if vBool != rBool {
+		t.Error(_p(vBool, rBool))
+	}
+	t.Log(rBool)
+
+	var rString string
+	vString := "this string serialize and deserialize."
+	if err := f(vString, &rString, false); err != nil {
+		t.Error(err)
+	}
+	if vString != rString {
+		t.Error(_p(vString, rString))
+	}
+	t.Log(rString)
 	/*
 		var _rUint8 int8
 		_vUint8 := int8(-8)

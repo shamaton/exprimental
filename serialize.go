@@ -1,9 +1,9 @@
 package experimental
 
 import (
-	"fmt"
 	"math"
 	"reflect"
+	"unsafe"
 )
 
 const (
@@ -31,7 +31,7 @@ func Serialize(holder interface{}) ([]byte, error) {
 			t = t.Elem()
 		}
 	}
-	fmt.Println(t.Type())
+	//fmt.Println(t.Type())
 
 	b := d.serialize(t)
 
@@ -40,7 +40,7 @@ func Serialize(holder interface{}) ([]byte, error) {
 
 func (d *serializer) serialize(rv reflect.Value) []byte {
 	var ret []byte
-	fmt.Println(rv.Kind())
+
 	switch rv.Kind() {
 	case reflect.Int8:
 		b := make([]byte, byte1)
@@ -136,9 +136,37 @@ func (d *serializer) serialize(rv reflect.Value) []byte {
 		b[7] = byte(v >> 56)
 		ret = b
 
+	case reflect.Bool:
+		b := make([]byte, byte1)
+
+		if rv.Bool() {
+			b[0] = 0x01
+		} else {
+			b[0] = 0x00
+		}
+		ret = b
+
+	case reflect.String:
+		str := rv.String()
+		l := uint32(len(str))
+		b := make([]byte, 0, l+byte4)
+		b = append(b, byte(l), byte(l>>8), byte(l>>16), byte(l>>24))
+
+		// NOTE : unsafe
+		strBytes := *(*[]byte)(unsafe.Pointer(&str))
+		b = append(b, strBytes...)
+		ret = b
+
+	case reflect.Ptr:
 	case reflect.Uintptr:
 		// todo : error
 	}
 
 	return ret
 }
+
+/*
+	s1 := time.Now()
+	e1 := time.Now()
+	fmt.Println("1:", e1.Sub(s1).Nanoseconds())
+*/
