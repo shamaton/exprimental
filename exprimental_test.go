@@ -9,6 +9,7 @@ import (
 	"reflect"
 	"testing"
 	"time"
+	"unsafe"
 )
 
 func _TestSimple(t *testing.T) {
@@ -346,6 +347,43 @@ func TestSDS(t *testing.T) {
 		}
 		t.Log(_rUint8)
 	*/
+	type st struct {
+		Int16  int16
+		Int    int
+		Int64  int64
+		Uint16 uint16
+		Uint   uint
+		Uint64 uint64
+		Float  float32
+		Double float64
+		Bool   bool
+		Uint8  byte
+		Int8   int8
+		String string
+	}
+	vSt := &st{
+		Int:    -32,
+		Int8:   -8,
+		Int16:  -16,
+		Int64:  -64,
+		Uint:   32,
+		Uint8:  8,
+		Uint16: 16,
+		Uint64: 64,
+		Float:  1.23,
+		Double: 2.3456,
+		Bool:   true,
+		String: "hello",
+	}
+	rSt := st{}
+	if err := f(vSt, &rSt, false); err != nil {
+		t.Error(err)
+	}
+	if *vSt != rSt {
+		t.Error(_p(*vSt, rSt))
+	}
+	t.Log(rSt)
+	t.Log("stst ", unsafe.Sizeof(*vSt), " : ", unsafe.Sizeof(rSt))
 
 	// pointer test mmmm...
 	hoge := new(int)

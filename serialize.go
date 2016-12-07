@@ -1,6 +1,7 @@
 package experimental
 
 import (
+	"fmt"
 	"math"
 	"reflect"
 	"unsafe"
@@ -11,6 +12,13 @@ const (
 	byte2
 	byte4
 	byte8
+)
+
+const (
+	intByte1 = 1 << iota
+	intByte2
+	intByte4
+	intByte8
 )
 
 type serializer struct {
@@ -31,11 +39,39 @@ func Serialize(holder interface{}) ([]byte, error) {
 			t = t.Elem()
 		}
 	}
+
+	var b []byte
+	if t.Kind() == reflect.Struct && !isDateTime(t) {
+		startOffset := (2 + t.NumField()) * intByte4
+		b = make([]byte, startOffset, t.Type().Size())
+		fmt.Println(len(b))
+		fmt.Println(t.Type().Size())
+		d.serializeStruct(t, &b, startOffset)
+		fmt.Println(len(b))
+	} else {
+		b = d.serialize(t)
+	}
 	//fmt.Println(t.Type())
 
-	b := d.serialize(t)
-
 	return b, nil
+}
+
+func (d *serializer) serializeStruct(rv reflect.Value, b *[]byte, offset int) {
+	nf := rv.NumField()
+	index := 2 * intByte4
+	for i := 0; i < nf; i++ {
+		// todo : サイズ受け取りたい
+		ab := d.serialize(rv.Field(i))
+		*b = append(*b, ab...)
+
+		(*b)[index], (*b)[index+1], (*b)[index+2], (*b)[index+3] = byte(offset), byte(offset>>8), byte(offset>>16), byte(offset>>24)
+		index += intByte4
+		offset += len(ab)
+	}
+	// size
+	si := len(*b)
+	(*b)[0], (*b)[1], (*b)[2], (*b)[3] = byte(si), byte(si>>8), byte(si>>16), byte(si>>24)
+	(*b)[4], (*b)[5], (*b)[6], (*b)[7] = byte(nf), byte(nf>>8), byte(nf>>16), byte(nf>>24)
 }
 
 func (d *serializer) serialize(rv reflect.Value) []byte {
