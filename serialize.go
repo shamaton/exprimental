@@ -1,7 +1,6 @@
 package experimental
 
 import (
-	"fmt"
 	"math"
 	"reflect"
 	"unsafe"
@@ -43,11 +42,10 @@ func Serialize(holder interface{}) ([]byte, error) {
 	var b []byte
 	if t.Kind() == reflect.Struct && !isDateTime(t) {
 		startOffset := (2 + t.NumField()) * intByte4
-		b = make([]byte, startOffset, t.Type().Size())
-		fmt.Println(len(b))
-		fmt.Println(t.Type().Size())
+
+		// NOTE : memory allocation is not just size.
+		b = make([]byte, startOffset, int(t.Type().Size())+startOffset)
 		d.serializeStruct(t, &b, startOffset)
-		fmt.Println(len(b))
 	} else {
 		b = d.serialize(t)
 	}
@@ -215,6 +213,39 @@ func (d *serializer) serialize(rv reflect.Value) []byte {
 		} else {
 			// only make length info
 			b := make([]byte, byte4)
+			ret = b
+		}
+
+	case reflect.Struct:
+		if isDateTime(rv) {
+			b := make([]byte, byte4+byte8, byte4+byte8)
+			// seconds
+			unixTime := rv.MethodByName("Unix").Call([]reflect.Value{})
+			sec := unixTime[0].Int()
+			b[0] = byte(sec)
+			b[1] = byte(sec >> 8)
+			b[2] = byte(sec >> 16)
+			b[3] = byte(sec >> 24)
+			b[4] = byte(sec >> 32)
+			b[5] = byte(sec >> 40)
+			b[6] = byte(sec >> 48)
+			b[7] = byte(sec >> 56)
+
+			// nanos
+			nsec := int32(rv.FieldByName("nsec").Int())
+			o := byte8
+			b[o+0] = byte(nsec)
+			b[o+1] = byte(nsec >> 8)
+			b[o+2] = byte(nsec >> 16)
+			b[o+3] = byte(nsec >> 24)
+			ret = b
+		} else {
+			b := make([]byte, 0, rv.Type().Size())
+			for i := 0; i < rv.NumField(); i++ {
+				ab := d.serialize(rv.Field(i))
+				b = append(b, ab...)
+			}
+			//fmt.Println("st size :", rv.Type().Size(), " ret : ", len(b))
 			ret = b
 		}
 

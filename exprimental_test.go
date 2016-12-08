@@ -236,7 +236,7 @@ func TestSDS(t *testing.T) {
 	t.Log(rUint16)
 
 	var rUint uint
-	vUint := uint(math.MaxUint32)
+	vUint := uint(math.MaxUint32 / 2)
 	if err := f(vUint, &rUint, false); err != nil {
 		t.Error(err)
 	}
@@ -347,6 +347,15 @@ func TestSDS(t *testing.T) {
 		}
 		t.Log(_rUint8)
 	*/
+	type childchild struct {
+		String string
+		Floats []float32
+	}
+	type child struct {
+		Int   int
+		Time  time.Time
+		Child childchild
+	}
 	type st struct {
 		Int16  int16
 		Int    int
@@ -360,6 +369,8 @@ func TestSDS(t *testing.T) {
 		Uint8  byte
 		Int8   int8
 		String string
+		Time   time.Time
+		Child  child
 	}
 	vSt := &st{
 		Int:    -32,
@@ -374,14 +385,21 @@ func TestSDS(t *testing.T) {
 		Double: 2.3456,
 		Bool:   true,
 		String: "hello",
+		Time:   time.Now(),
+		Child: child{
+			Int:   1234567,
+			Time:  time.Now(),
+			Child: childchild{String: "this is child in child", Floats: []float32{1.2, 3.4, 5.6}},
+		},
 	}
 	rSt := st{}
 	if err := f(vSt, &rSt, false); err != nil {
 		t.Error(err)
 	}
-	if *vSt != rSt {
+	if !reflect.DeepEqual(*vSt, rSt) {
 		t.Error(_p(*vSt, rSt))
 	}
+
 	t.Log(rSt)
 	t.Log("stst ", unsafe.Sizeof(*vSt), " : ", unsafe.Sizeof(rSt))
 

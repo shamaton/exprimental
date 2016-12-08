@@ -66,9 +66,9 @@ func (d *deserializer) deserializeStruct(t reflect.Value) error {
 		indexOffset := 8 + i*4
 		dataOffset := binary.LittleEndian.Uint32(d.data[indexOffset : indexOffset+4])
 		filed := t.Field(i)
-		d.deserialize(filed, dataOffset)
-
-		fmt.Println(filed.Interface())
+		if _, err := d.deserialize(filed, dataOffset); err != nil {
+			return err
+		}
 	}
 	return nil
 }
@@ -272,16 +272,12 @@ func (d *deserializer) deserialize(st reflect.Value, offset uint32) (uint32, err
 			// update
 			offset = o2
 		} else {
-
-			/*
-				t.Log("this is struct")
-				t.Log(st.NumField())
-
-				for i := 0; i < st.NumField(); i++ {
-					v := st.Field(i)
-					cconv(v.Interface(), t)
+			for i := 0; i < st.NumField(); i++ {
+				offset, err = d.deserialize(st.Field(i), offset)
+				if err != nil {
+					return 0, err
 				}
-			*/
+			}
 		}
 
 	case reflect.Slice:
