@@ -69,7 +69,9 @@ func (d *serializer) serializeStruct(rv reflect.Value, b *[]byte, offset int) {
 	// size
 	si := len(*b)
 	(*b)[0], (*b)[1], (*b)[2], (*b)[3] = byte(si), byte(si>>8), byte(si>>16), byte(si>>24)
-	(*b)[4], (*b)[5], (*b)[6], (*b)[7] = byte(nf), byte(nf>>8), byte(nf>>16), byte(nf>>24)
+	// index max
+	im := nf - 1
+	(*b)[4], (*b)[5], (*b)[6], (*b)[7] = byte(im), byte(im>>8), byte(im>>16), byte(im>>24)
 }
 
 func (d *serializer) serialize(rv reflect.Value) []byte {

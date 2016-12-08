@@ -150,6 +150,45 @@ func _TestSimple(t *testing.T) {
 
 }
 
+func TestCorrect(t *testing.T) {
+
+	d, err := fileToBytes("Test.pack")
+	if err != nil {
+		t.Error(err)
+	}
+	type testSt struct {
+		Int16    int16
+		Int32    int32
+		Int64    int64
+		UInt16   uint16
+		UInt32   uint32
+		UInt64   uint64
+		Float    float32
+		Double   float64
+		Bool     bool
+		Byte     byte
+		SByte    int8
+		DateTime time.Time
+		String   string
+	}
+	st := testSt{}
+
+	if err := Deserialize(&st, d); err != nil {
+		t.Error(err)
+	}
+	dd, err := Serialize(st)
+	if err != nil {
+		t.Error(t)
+	}
+	if !reflect.DeepEqual(d, dd) {
+		t.Error("data different")
+	}
+	t.Log("d :", len(d), " dd :", len(dd))
+	t.Log(d)
+	t.Log(dd)
+	t.Log(st)
+}
+
 func TestSDS(t *testing.T) {
 	f := func(in interface{}, out interface{}, isDispByte bool) error {
 		d, err := Serialize(in)
