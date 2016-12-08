@@ -7,10 +7,10 @@ import (
 )
 
 const (
-	byte1 uint32 = 1 << iota
-	byte2
-	byte4
-	byte8
+	uintByte1 uint32 = 1 << iota
+	uintByte2
+	uintByte4
+	uintByte8
 )
 
 const (
@@ -79,20 +79,20 @@ func (d *serializer) serialize(rv reflect.Value) []byte {
 
 	switch rv.Kind() {
 	case reflect.Int8:
-		b := make([]byte, byte1)
+		b := make([]byte, uintByte1)
 		v := rv.Int()
 		b[0] = byte(v)
 		ret = b
 
 	case reflect.Int16:
-		b := make([]byte, byte2)
+		b := make([]byte, uintByte2)
 		v := rv.Int()
 		b[0] = byte(v)
 		b[1] = byte(v >> 8)
 		ret = b
 
 	case reflect.Int32, reflect.Int:
-		b := make([]byte, byte4)
+		b := make([]byte, uintByte4)
 		v := rv.Int()
 		b[0] = byte(v)
 		b[1] = byte(v >> 8)
@@ -101,7 +101,7 @@ func (d *serializer) serialize(rv reflect.Value) []byte {
 		ret = b
 
 	case reflect.Int64:
-		b := make([]byte, byte8)
+		b := make([]byte, uintByte8)
 		v := rv.Int()
 		b[0] = byte(v)
 		b[1] = byte(v >> 8)
@@ -114,20 +114,20 @@ func (d *serializer) serialize(rv reflect.Value) []byte {
 		ret = b
 
 	case reflect.Uint8:
-		b := make([]byte, byte1)
+		b := make([]byte, uintByte1)
 		v := rv.Uint()
 		b[0] = byte(v)
 		ret = b
 
 	case reflect.Uint16:
-		b := make([]byte, byte2)
+		b := make([]byte, uintByte2)
 		v := rv.Uint()
 		b[0] = byte(v)
 		b[1] = byte(v >> 8)
 		ret = b
 
 	case reflect.Uint32, reflect.Uint:
-		b := make([]byte, byte4)
+		b := make([]byte, uintByte4)
 		v := rv.Uint()
 		b[0] = byte(v)
 		b[1] = byte(v >> 8)
@@ -136,7 +136,7 @@ func (d *serializer) serialize(rv reflect.Value) []byte {
 		ret = b
 
 	case reflect.Uint64:
-		b := make([]byte, byte8)
+		b := make([]byte, uintByte8)
 		v := rv.Uint()
 		b[0] = byte(v)
 		b[1] = byte(v >> 8)
@@ -149,7 +149,7 @@ func (d *serializer) serialize(rv reflect.Value) []byte {
 		ret = b
 
 	case reflect.Float32:
-		b := make([]byte, byte4)
+		b := make([]byte, uintByte4)
 
 		v := math.Float32bits(float32(rv.Float()))
 		b[0] = byte(v)
@@ -159,7 +159,7 @@ func (d *serializer) serialize(rv reflect.Value) []byte {
 		ret = b
 
 	case reflect.Float64:
-		b := make([]byte, byte8)
+		b := make([]byte, uintByte8)
 
 		v := math.Float64bits(rv.Float())
 		b[0] = byte(v)
@@ -173,7 +173,7 @@ func (d *serializer) serialize(rv reflect.Value) []byte {
 		ret = b
 
 	case reflect.Bool:
-		b := make([]byte, byte1)
+		b := make([]byte, uintByte1)
 
 		if rv.Bool() {
 			b[0] = 0x01
@@ -185,7 +185,7 @@ func (d *serializer) serialize(rv reflect.Value) []byte {
 	case reflect.String:
 		str := rv.String()
 		l := uint32(len(str))
-		b := make([]byte, 0, l+byte4)
+		b := make([]byte, 0, l+uintByte4)
 		b = append(b, byte(l), byte(l>>8), byte(l>>16), byte(l>>24))
 
 		// NOTE : unsafe
@@ -200,7 +200,7 @@ func (d *serializer) serialize(rv reflect.Value) []byte {
 			fb := d.serialize(rv.Index(0))
 
 			// second : make byte array
-			size := uint32(l*len(fb)) + byte4
+			size := uint32(l*len(fb)) + uintByte4
 			b := make([]byte, 0, size)
 
 			// third : append data
@@ -214,13 +214,13 @@ func (d *serializer) serialize(rv reflect.Value) []byte {
 			ret = b
 		} else {
 			// only make length info
-			b := make([]byte, byte4)
+			b := make([]byte, uintByte4)
 			ret = b
 		}
 
 	case reflect.Struct:
 		if isDateTime(rv) {
-			b := make([]byte, byte4+byte8, byte4+byte8)
+			b := make([]byte, uintByte4+uintByte8, uintByte4+uintByte8)
 			// seconds
 			unixTime := rv.MethodByName("Unix").Call([]reflect.Value{})
 			sec := unixTime[0].Int()
@@ -235,7 +235,7 @@ func (d *serializer) serialize(rv reflect.Value) []byte {
 
 			// nanos
 			nsec := int32(rv.FieldByName("nsec").Int())
-			o := byte8
+			o := uintByte8
 			b[o+0] = byte(nsec)
 			b[o+1] = byte(nsec >> 8)
 			b[o+2] = byte(nsec >> 16)
