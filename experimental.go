@@ -7,6 +7,7 @@ import (
 	"reflect"
 	"time"
 	"unicode/utf16"
+	"errors"
 )
 
 type Char rune
@@ -414,11 +415,14 @@ func (d *deserializer) deserialize(st reflect.Value, offset uint32) (uint32, err
 		// update
 		offset = o
 
-	case reflect.Map:
-	//t.Log("this is map")
+	case reflect.Ptr:
+		e := st.Type().Elem()
+		v := reflect.New(e).Elem()
+		offset, err = d.deserialize(v, offset)
+		st.Set(v.Addr())
 
 	default:
-		//t.Log("unknown....")
+		err = errors.New(fmt.Sprint("this type is not supported : ", st.Type()))
 	}
 
 	return offset, err

@@ -628,8 +628,39 @@ func TestCheck(t *testing.T) {
 		t.Log(d)
 		t.Error("binary data is not correct!!")
 	}
-	t.Log(st)
 
+	type StructPointer struct {
+		Int16          *int16
+		Int            *int
+		Int64          *int64
+		Uint16         *uint16
+		Uint           *uint
+		Uint64         *uint64
+		Float          *float32
+		Double         *float64
+		Bool           *bool
+		Uint8          *byte
+		Int8           *int8
+		Char           *Char
+		TimeSpan       *time.Duration
+		DateTime       *time.Time
+		DateTimeOffset *DateTimeOffset
+		String         *string
+	}
+
+	stp := &StructPointer{}
+	if err := Deserialize(stp, packData); err != nil {
+		t.Error(err)
+	}
+	dp, err := Serialize(stp)
+	if err != nil {
+		t.Error(err)
+	}
+	if !reflect.DeepEqual(packData, dp) {
+		t.Log(packData)
+		t.Log(d)
+		t.Error("binary data is not correct!!")
+	}
 }
 
 func fileToBytes(fileName string) ([]byte, error) {

@@ -1,6 +1,8 @@
 package experimental
 
 import (
+	"errors"
+	"fmt"
 	"math"
 	"reflect"
 	"unicode/utf16"
@@ -41,26 +43,30 @@ func Serialize(holder interface{}) ([]byte, error) {
 	}
 
 	var b []byte
+	var err error
 	if t.Kind() == reflect.Struct && !isDateTime(t) && !isDateTimeOffset(t) {
 		startOffset := (2 + t.NumField()) * intByte4
 
 		// NOTE : memory allocation is not just size.
 		b = make([]byte, startOffset, int(t.Type().Size())+startOffset)
-		d.serializeStruct(t, &b, startOffset)
+		err = d.serializeStruct(t, &b, startOffset)
 	} else {
-		b = d.serialize(t)
+		b, err = d.serialize(t)
 	}
 	//fmt.Println(t.Type())
 
-	return b, nil
+	return b, err
 }
 
-func (d *serializer) serializeStruct(rv reflect.Value, b *[]byte, offset int) {
+func (d *serializer) serializeStruct(rv reflect.Value, b *[]byte, offset int) error {
 	nf := rv.NumField()
 	index := 2 * intByte4
 	for i := 0; i < nf; i++ {
 		// todo : サイズ受け取りたい
-		ab := d.serialize(rv.Field(i))
+		ab, err := d.serialize(rv.Field(i))
+		if err != nil {
+			return err
+		}
 		*b = append(*b, ab...)
 
 		(*b)[index], (*b)[index+1], (*b)[index+2], (*b)[index+3] = byte(offset), byte(offset>>8), byte(offset>>16), byte(offset>>24)
@@ -73,9 +79,10 @@ func (d *serializer) serializeStruct(rv reflect.Value, b *[]byte, offset int) {
 	// index max
 	im := nf - 1
 	(*b)[4], (*b)[5], (*b)[6], (*b)[7] = byte(im), byte(im>>8), byte(im>>16), byte(im>>24)
+	return nil
 }
 
-func (d *serializer) serialize(rv reflect.Value) []byte {
+func (d *serializer) serialize(rv reflect.Value) ([]byte, error) {
 	var ret []byte
 
 	switch rv.Kind() {
@@ -245,7 +252,10 @@ func (d *serializer) serialize(rv reflect.Value) []byte {
 		l := rv.Len()
 		if l > 0 {
 			// first : know element size
-			fb := d.serialize(rv.Index(0))
+			fb, err := d.serialize(rv.Index(0))
+			if err != nil {
+				return []byte(""), err
+			}
 
 			// second : make byte array
 			size := uint32(l*len(fb)) + uintByte4
@@ -256,7 +266,10 @@ func (d *serializer) serialize(rv reflect.Value) []byte {
 			b = append(b, fb...)
 
 			for i := 1; i < l; i++ {
-				ab := d.serialize(rv.Index(i))
+				ab, err := d.serialize(rv.Index(i))
+				if err != nil {
+					return []byte(""), err
+				}
 				b = append(b, ab...)
 			}
 			ret = b
@@ -331,7 +344,10 @@ func (d *serializer) serialize(rv reflect.Value) []byte {
 		} else {
 			b := make([]byte, 0, rv.Type().Size())
 			for i := 0; i < rv.NumField(); i++ {
-				ab := d.serialize(rv.Field(i))
+				ab, err := d.serialize(rv.Field(i))
+				if err != nil {
+					return []byte(""), err
+				}
 				b = append(b, ab...)
 			}
 			//fmt.Println("st size :", rv.Type().Size(), " ret : ", len(b))
@@ -339,11 +355,20 @@ func (d *serializer) serialize(rv reflect.Value) []byte {
 		}
 
 	case reflect.Ptr:
-	case reflect.Uintptr:
-		// todo : error
+		if rv.IsNil() {
+			return []byte(""), errors.New(fmt.Sprint("pointer is null : ", rv.Type()))
+		}
+		b, err := d.serialize(rv.Elem())
+		if err != nil {
+			return []byte(""), err
+		}
+		ret = b
+
+	default:
+		return []byte(""), errors.New(fmt.Sprint("this type is not supported : ", rv.Type()))
 	}
 
-	return ret
+	return ret, nil
 }
 
 /*
