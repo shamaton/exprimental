@@ -9,10 +9,11 @@ import (
 	"reflect"
 	"testing"
 	"time"
+	"unicode/utf16"
 	"unsafe"
 )
 
-func _TestSimple(t *testing.T) {
+func TestSimple(t *testing.T) {
 	f := func(i interface{}, fileName string) error {
 		d, err := fileToBytes(fileName)
 		if err != nil {
@@ -148,9 +149,25 @@ func _TestSimple(t *testing.T) {
 		t.Error(errPrefixMessage, Time)
 	}
 
+	TimeOffset := DateTimeOffset{}
+	if err := f(&TimeOffset, "DateTimeOffset.pack"); err != nil {
+		t.Error(err)
+	}
+	if TimeOffset != Unix(1480846414, 681594000) {
+		t.Error(errPrefixMessage, TimeOffset)
+	}
+
+	Duration := time.Duration(0)
+	if err := f(&Duration, "TimeSpan.pack"); err != nil {
+		t.Error(err)
+	}
+	if Duration != time.Duration(10*time.Millisecond) {
+		t.Error(errPrefixMessage, Duration)
+	}
+
 }
 
-func TestCorrect(t *testing.T) {
+func _TestCorrect(t *testing.T) {
 
 	d, err := fileToBytes("Test.pack")
 	if err != nil {
@@ -334,6 +351,16 @@ func TestSDS(t *testing.T) {
 	}
 	t.Log(rBool)
 
+	var rChar Char
+	vChar := Char('Z')
+	if err := f(vChar, &rChar, false); err != nil {
+		t.Error(err)
+	}
+	if vChar != rChar {
+		t.Error(_p(vChar, rChar))
+	}
+	t.Logf("%#U", rChar)
+
 	var rString string
 	vString := "this string serialize and deserialize."
 	if err := f(vString, &rString, false); err != nil {
@@ -343,6 +370,26 @@ func TestSDS(t *testing.T) {
 		t.Error(_p(vString, rString))
 	}
 	t.Log(rString)
+
+	var rTime time.Time
+	vTime := time.Now()
+	if err := f(vTime, &rTime, false); err != nil {
+		t.Error(err)
+	}
+	if vTime != rTime {
+		t.Error(_p(vTime, rTime))
+	}
+	t.Log(rTime)
+
+	var rDuration time.Duration
+	vDuration := time.Duration(12*time.Hour + 34*time.Minute + 56*time.Second + 78*time.Nanosecond)
+	if err := f(vDuration, &rDuration, false); err != nil {
+		t.Error(err)
+	}
+	if vDuration != rDuration {
+		t.Error(_p(vDuration, rDuration))
+	}
+	t.Log(rDuration)
 
 	// todo : more array/slice test cases
 	var rIntArr []int
@@ -543,7 +590,7 @@ func _TestArray(t *testing.T) {
 	}
 }
 
-func _TestCheck(t *testing.T) {
+func TestCheck(t *testing.T) {
 
 	packData, err := fileToBytes("Primitive.pack")
 	if err != nil {
@@ -551,7 +598,7 @@ func _TestCheck(t *testing.T) {
 	}
 	t.Log("data size : ", len(packData))
 
-	type st2 struct {
+	type Struct struct {
 		Int16          int16
 		Int            int
 		Int64          int64
@@ -563,16 +610,42 @@ func _TestCheck(t *testing.T) {
 		Bool           bool
 		Uint8          byte
 		Int8           int8 // Sbyte
-		Char           rune
-		TimeSpan       []int
+		Char           Char //uint16
+		TimeSpan       time.Duration
 		DateTime       time.Time
-		DateTimeOffset []int
+		DateTimeOffset DateTimeOffset
 		String         string
 	}
 
-	st3 := &st2{}
-	Deserialize(st3, packData)
+	st := &Struct{}
+	if err := Deserialize(st, packData); err != nil {
+		t.Error(err)
+	}
+	d, err := Serialize(st)
+	if err != nil {
+		t.Error(err)
+	}
+	if !reflect.DeepEqual(packData, d) {
+		t.Log(packData)
+		t.Log(d)
+		t.Error("binary data is not correct!!")
+	}
+	t.Log(st.Char)
 
+	ru := rune('a')
+	char := Char('a')
+	t.Log(char)
+
+	rr := reflect.ValueOf(Char(ru))
+	t.Log(rr.Kind(), " - ", rr.Type())
+
+	rrr := reflect.ValueOf(char)
+	ttt := reflect.TypeOf(char)
+	t.Log(rrr.Kind(), " - ", rrr.Type())
+	t.Log(ttt.Kind(), " - ", ttt)
+
+	t.Log(utf16.EncodeRune(rune(char)))
+	t.Log(utf16.EncodeRune('a'))
 }
 
 func fileToBytes(fileName string) ([]byte, error) {

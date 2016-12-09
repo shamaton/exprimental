@@ -6,7 +6,27 @@ import (
 	"math"
 	"reflect"
 	"time"
+	"unicode/utf16"
 )
+
+type Char rune
+
+type DateTimeOffset struct {
+	time.Time
+}
+
+// todo : divide pakcage
+func Unix(sec int64, nsec int64) DateTimeOffset {
+	return DateTimeOffset{
+		time.Unix(sec, nsec),
+	}
+}
+
+func Now() DateTimeOffset {
+	return DateTimeOffset{
+		time.Now(),
+	}
+}
 
 type deserializer struct {
 	data []byte
@@ -34,7 +54,7 @@ func Deserialize(holder interface{}, data []byte) error {
 	}
 
 	// Struct
-	if t.Kind() == reflect.Struct && !isDateTime(t) {
+	if t.Kind() == reflect.Struct && !isDateTime(t) && !isDateTimeOffset(t) {
 		return ds.deserializeStruct(t)
 	}
 	// Primitive?
@@ -65,8 +85,7 @@ func (d *deserializer) deserializeStruct(t reflect.Value) error {
 	for i := 0; i < t.NumField(); i++ {
 		indexOffset := 8 + i*4
 		dataOffset := binary.LittleEndian.Uint32(d.data[indexOffset : indexOffset+4])
-		filed := t.Field(i)
-		if _, err := d.deserialize(filed, dataOffset); err != nil {
+		if _, err := d.deserialize(t.Field(i), dataOffset); err != nil {
 			return err
 		}
 	}
@@ -77,6 +96,34 @@ func isDateTime(value reflect.Value) bool {
 	i := value.Interface()
 	switch i.(type) {
 	case time.Time:
+		return true
+	}
+	return false
+}
+
+func isDateTimeOffset(value reflect.Value) bool {
+	i := value.Interface()
+	switch i.(type) {
+	case DateTimeOffset:
+		return true
+	}
+	return false
+}
+
+func isDuration(value reflect.Value) bool {
+	// check type
+	i := value.Interface()
+	switch i.(type) {
+	case time.Duration:
+		return true
+	}
+	return false
+}
+
+func isChar(value reflect.Value) bool {
+	i := value.Interface()
+	switch i.(type) {
+	case Char:
 		return true
 	}
 	return false
@@ -148,16 +195,18 @@ func (d *deserializer) deserialize(st reflect.Value, offset uint32) (uint32, err
 		offset = o
 
 	case reflect.Int32:
-		// TODO : if rune
-		/*
-			if isRune {
-				// rune [ushort(2)]
-				b := []byte{d.data[d.offset], d.data[d.offset+1], 0, 0}
-				_v := binary.LittleEndian.Uint32(b)
-				v := rune(_v)
-				st.Set(reflect.ValueOf(v))
-			} else*/
-		{
+		// char is used instead of rune
+		if isChar(st) {
+			// rune [ushort(2)]
+			b, o := d.read_s2(offset)
+			u16s := []uint16{binary.LittleEndian.Uint16(b)}
+			_v := utf16.Decode(u16s)
+			v := Char(_v[0])
+			st.Set(reflect.ValueOf(v))
+
+			// update
+			offset = o
+		} else {
 			// Int32 [int(4)]
 			b, o := d.read_s4(offset)
 			_v := binary.LittleEndian.Uint32(b)
@@ -178,13 +227,26 @@ func (d *deserializer) deserialize(st reflect.Value, offset uint32) (uint32, err
 		offset = o
 
 	case reflect.Int64:
-		// Int64 [long(8)]
-		b, o := d.read_s8(offset)
-		_v := binary.LittleEndian.Uint64(b)
-		v := int64(_v)
-		st.SetInt(v)
-		// update
-		offset = o
+		if isDuration(st) {
+			// todo : NOTE procedure is as same as datetime
+			b, o1 := d.read_s8(offset)
+			seconds := binary.LittleEndian.Uint64(b)
+			b, o2 := d.read_s4(o1)
+			nanos := binary.LittleEndian.Uint32(b)
+			v := time.Duration(int64(seconds)*1000*1000 + int64(nanos))
+			//fmt.Println(int64(seconds), int64(nanos))
+			st.Set(reflect.ValueOf(v))
+			// update
+			offset = o2
+		} else {
+			// Int64 [long(8)]
+			b, o := d.read_s8(offset)
+			_v := binary.LittleEndian.Uint64(b)
+			v := int64(_v)
+			st.SetInt(v)
+			// update
+			offset = o
+		}
 
 	case reflect.Uint8:
 		// byte in cSharp
@@ -261,7 +323,20 @@ func (d *deserializer) deserialize(st reflect.Value, offset uint32) (uint32, err
 		offset = o + l
 
 	case reflect.Struct:
-		if isDateTime(st) {
+		if isDateTimeOffset(st) {
+			b, o1 := d.read_s8(offset)
+			seconds := binary.LittleEndian.Uint64(b)
+			b, o2 := d.read_s4(o1)
+			nanos := binary.LittleEndian.Uint32(b)
+			b, o3 := d.read_s2(o2)
+			offMin := binary.LittleEndian.Uint16(b)
+
+			v := Unix(int64(seconds)-int64(offMin*60), int64(nanos))
+			st.Set(reflect.ValueOf(v))
+			// update
+			offset = o3
+
+		} else if isDateTime(st) {
 			b, o1 := d.read_s8(offset)
 			seconds := binary.LittleEndian.Uint64(b)
 			b, o2 := d.read_s4(o1)

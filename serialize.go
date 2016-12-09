@@ -1,8 +1,10 @@
 package experimental
 
 import (
+	"fmt"
 	"math"
 	"reflect"
+	"unicode/utf16"
 	"unsafe"
 )
 
@@ -40,7 +42,7 @@ func Serialize(holder interface{}) ([]byte, error) {
 	}
 
 	var b []byte
-	if t.Kind() == reflect.Struct && !isDateTime(t) {
+	if t.Kind() == reflect.Struct && !isDateTime(t) && !isDateTimeOffset(t) {
 		startOffset := (2 + t.NumField()) * intByte4
 
 		// NOTE : memory allocation is not just size.
@@ -91,7 +93,30 @@ func (d *serializer) serialize(rv reflect.Value) []byte {
 		b[1] = byte(v >> 8)
 		ret = b
 
-	case reflect.Int32, reflect.Int:
+	case reflect.Int32:
+		if isChar(rv) {
+
+			// rune [ushort(2)]
+			enc := utf16.Encode([]rune{int32(rv.Int())})
+			fmt.Println("enc ---------> ", len(enc))
+
+			b := make([]byte, uintByte2)
+			v := enc[0]
+			b[0] = byte(v)
+			b[1] = byte(v >> 8)
+			ret = b
+		} else {
+			b := make([]byte, uintByte4)
+			v := rv.Int()
+			b[0] = byte(v)
+			b[1] = byte(v >> 8)
+			b[2] = byte(v >> 16)
+			b[3] = byte(v >> 24)
+			ret = b
+
+		}
+
+	case reflect.Int:
 		b := make([]byte, uintByte4)
 		v := rv.Int()
 		b[0] = byte(v)
@@ -101,17 +126,42 @@ func (d *serializer) serialize(rv reflect.Value) []byte {
 		ret = b
 
 	case reflect.Int64:
-		b := make([]byte, uintByte8)
-		v := rv.Int()
-		b[0] = byte(v)
-		b[1] = byte(v >> 8)
-		b[2] = byte(v >> 16)
-		b[3] = byte(v >> 24)
-		b[4] = byte(v >> 32)
-		b[5] = byte(v >> 40)
-		b[6] = byte(v >> 48)
-		b[7] = byte(v >> 56)
-		ret = b
+		if isDuration(rv) {
+			b := make([]byte, uintByte4+uintByte8, uintByte4+uintByte8)
+			// seconds
+			ns := rv.MethodByName("Nanoseconds").Call([]reflect.Value{})[0]
+			nanoseconds := ns.Int()
+			sec, nsec := nanoseconds/(1000*1000), int32(nanoseconds%(1000*1000))
+			b[0] = byte(sec)
+			b[1] = byte(sec >> 8)
+			b[2] = byte(sec >> 16)
+			b[3] = byte(sec >> 24)
+			b[4] = byte(sec >> 32)
+			b[5] = byte(sec >> 40)
+			b[6] = byte(sec >> 48)
+			b[7] = byte(sec >> 56)
+
+			// nanos
+			o := uintByte8
+			b[o+0] = byte(nsec)
+			b[o+1] = byte(nsec >> 8)
+			b[o+2] = byte(nsec >> 16)
+			b[o+3] = byte(nsec >> 24)
+			ret = b
+		} else {
+
+			b := make([]byte, uintByte8)
+			v := rv.Int()
+			b[0] = byte(v)
+			b[1] = byte(v >> 8)
+			b[2] = byte(v >> 16)
+			b[3] = byte(v >> 24)
+			b[4] = byte(v >> 32)
+			b[5] = byte(v >> 40)
+			b[6] = byte(v >> 48)
+			b[7] = byte(v >> 56)
+			ret = b
+		}
 
 	case reflect.Uint8:
 		b := make([]byte, uintByte1)
@@ -219,7 +269,46 @@ func (d *serializer) serialize(rv reflect.Value) []byte {
 		}
 
 	case reflect.Struct:
-		if isDateTime(rv) {
+		if isDateTimeOffset(rv) {
+
+			b := make([]byte, uintByte4+uintByte8+uintByte2, uintByte4+uintByte8+uintByte2)
+
+			// offset
+			rets := rv.MethodByName("Zone").Call([]reflect.Value{})
+			_, offSec := rets[0] /*name*/, rets[1].Int() /*offset*/
+			offMin := uint16(offSec / 60)
+
+			// seconds
+			rets = rv.MethodByName("Unix").Call([]reflect.Value{})
+			seconds := rets[0].Int() + offSec
+
+			// nanos
+			nanos := int32(rv.FieldByName("nsec").Int())
+
+			// seconds to byte
+			b[0] = byte(seconds)
+			b[1] = byte(seconds >> 8)
+			b[2] = byte(seconds >> 16)
+			b[3] = byte(seconds >> 24)
+			b[4] = byte(seconds >> 32)
+			b[5] = byte(seconds >> 40)
+			b[6] = byte(seconds >> 48)
+			b[7] = byte(seconds >> 56)
+
+			// nanos to byte
+			o := uintByte8
+			b[o+0] = byte(nanos)
+			b[o+1] = byte(nanos >> 8)
+			b[o+2] = byte(nanos >> 16)
+			b[o+3] = byte(nanos >> 24)
+
+			// offset to byte
+			o += uintByte4
+			b[o+0] = byte(offMin)
+			b[o+1] = byte(offMin >> 8)
+
+			ret = b
+		} else if isDateTime(rv) {
 			b := make([]byte, uintByte4+uintByte8, uintByte4+uintByte8)
 			// seconds
 			unixTime := rv.MethodByName("Unix").Call([]reflect.Value{})
