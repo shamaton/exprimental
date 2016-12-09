@@ -1,7 +1,6 @@
 package experimental
 
 import (
-	"fmt"
 	"math"
 	"reflect"
 	"unicode/utf16"
@@ -98,7 +97,6 @@ func (d *serializer) serialize(rv reflect.Value) []byte {
 
 			// rune [ushort(2)]
 			enc := utf16.Encode([]rune{int32(rv.Int())})
-			fmt.Println("enc ---------> ", len(enc))
 
 			b := make([]byte, uintByte2)
 			v := enc[0]
