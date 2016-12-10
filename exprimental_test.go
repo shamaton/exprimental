@@ -689,3 +689,9 @@ func fileToBytes(fileName string) ([]byte, error) {
 
 	return b, nil
 }
+
+/*
+	s1 := time.Now()
+	e1 := time.Now()
+	fmt.Println("1:", e1.Sub(s1).Nanoseconds())
+*/

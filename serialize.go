@@ -53,7 +53,6 @@ func Serialize(holder interface{}) ([]byte, error) {
 	} else {
 		b, err = d.serialize(t)
 	}
-	//fmt.Println(t.Type())
 
 	return b, err
 }
@@ -350,7 +349,6 @@ func (d *serializer) serialize(rv reflect.Value) ([]byte, error) {
 				}
 				b = append(b, ab...)
 			}
-			//fmt.Println("st size :", rv.Type().Size(), " ret : ", len(b))
 			ret = b
 		}
 
@@ -371,8 +369,3 @@ func (d *serializer) serialize(rv reflect.Value) ([]byte, error) {
 	return ret, nil
 }
 
-/*
-	s1 := time.Now()
-	e1 := time.Now()
-	fmt.Println("1:", e1.Sub(s1).Nanoseconds())
-*/

@@ -157,8 +157,6 @@ func (d *deserializer) read_s8(index uint32) ([]byte, uint32) {
 func (d *deserializer) deserialize(st reflect.Value, offset uint32) (uint32, error) {
 	var err error
 
-	//fmt.Println("--------->", st.Type())
-
 	switch st.Kind() {
 	case reflect.Int8:
 		b, o := d.read_s1(offset)
@@ -216,7 +214,7 @@ func (d *deserializer) deserialize(st reflect.Value, offset uint32) (uint32, err
 			b, o2 := d.read_s4(o1)
 			nanos := binary.LittleEndian.Uint32(b)
 			v := time.Duration(int64(seconds)*1000*1000 + int64(nanos))
-			//fmt.Println(int64(seconds), int64(nanos))
+
 			st.Set(reflect.ValueOf(v))
 			// update
 			offset = o2
@@ -324,7 +322,7 @@ func (d *deserializer) deserialize(st reflect.Value, offset uint32) (uint32, err
 			b, o2 := d.read_s4(o1)
 			nanos := binary.LittleEndian.Uint32(b)
 			v := time.Unix(int64(seconds), int64(nanos))
-			//fmt.Println(int64(seconds), int64(nanos))
+
 			st.Set(reflect.ValueOf(v))
 			// update
 			offset = o2
