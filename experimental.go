@@ -154,14 +154,14 @@ func (d *deserializer) read_s8(index uint32) ([]byte, uint32) {
 	return d.data[index : index+rb], index + rb
 }
 
-func (d *deserializer) deserialize(st reflect.Value, offset uint32) (uint32, error) {
+func (d *deserializer) deserialize(rv reflect.Value, offset uint32) (uint32, error) {
 	var err error
 
-	switch st.Kind() {
+	switch rv.Kind() {
 	case reflect.Int8:
 		b, o := d.read_s1(offset)
 		v := int8(b)
-		st.Set(reflect.ValueOf(v))
+		rv.Set(reflect.ValueOf(v))
 		// update
 		offset = o
 
@@ -170,19 +170,19 @@ func (d *deserializer) deserialize(st reflect.Value, offset uint32) (uint32, err
 		b, o := d.read_s2(offset)
 		_v := binary.LittleEndian.Uint16(b)
 		v := int16(_v)
-		st.Set(reflect.ValueOf(v))
+		rv.Set(reflect.ValueOf(v))
 		// update
 		offset = o
 
 	case reflect.Int32:
 		// char is used instead of rune
-		if isChar(st) {
+		if isChar(rv) {
 			// rune [ushort(2)]
 			b, o := d.read_s2(offset)
 			u16s := []uint16{binary.LittleEndian.Uint16(b)}
 			_v := utf16.Decode(u16s)
 			v := Char(_v[0])
-			st.Set(reflect.ValueOf(v))
+			rv.Set(reflect.ValueOf(v))
 
 			// update
 			offset = o
@@ -191,7 +191,7 @@ func (d *deserializer) deserialize(st reflect.Value, offset uint32) (uint32, err
 			b, o := d.read_s4(offset)
 			_v := binary.LittleEndian.Uint32(b)
 			v := int32(int32(_v))
-			st.Set(reflect.ValueOf(v))
+			rv.Set(reflect.ValueOf(v))
 			// update
 			offset = o
 		}
@@ -202,12 +202,12 @@ func (d *deserializer) deserialize(st reflect.Value, offset uint32) (uint32, err
 		_v := binary.LittleEndian.Uint32(b)
 		// NOTE : double cast
 		v := int(int32(_v))
-		st.Set(reflect.ValueOf(v))
+		rv.Set(reflect.ValueOf(v))
 		// update
 		offset = o
 
 	case reflect.Int64:
-		if isDuration(st) {
+		if isDuration(rv) {
 			// todo : NOTE procedure is as same as datetime
 			b, o1 := d.read_s8(offset)
 			seconds := binary.LittleEndian.Uint64(b)
@@ -215,7 +215,7 @@ func (d *deserializer) deserialize(st reflect.Value, offset uint32) (uint32, err
 			nanos := binary.LittleEndian.Uint32(b)
 			v := time.Duration(int64(seconds)*1000*1000 + int64(nanos))
 
-			st.Set(reflect.ValueOf(v))
+			rv.Set(reflect.ValueOf(v))
 			// update
 			offset = o2
 		} else {
@@ -223,7 +223,7 @@ func (d *deserializer) deserialize(st reflect.Value, offset uint32) (uint32, err
 			b, o := d.read_s8(offset)
 			_v := binary.LittleEndian.Uint64(b)
 			v := int64(_v)
-			st.SetInt(v)
+			rv.SetInt(v)
 			// update
 			offset = o
 		}
@@ -232,7 +232,7 @@ func (d *deserializer) deserialize(st reflect.Value, offset uint32) (uint32, err
 		// byte in cSharp
 		_v, o := d.read_s1(offset)
 		v := uint8(_v)
-		st.Set(reflect.ValueOf(v))
+		rv.Set(reflect.ValueOf(v))
 		// update
 		offset = o
 
@@ -240,14 +240,14 @@ func (d *deserializer) deserialize(st reflect.Value, offset uint32) (uint32, err
 		// Uint16 / Char
 		b, o := d.read_s2(offset)
 		v := binary.LittleEndian.Uint16(b)
-		st.Set(reflect.ValueOf(v))
+		rv.Set(reflect.ValueOf(v))
 		// update
 		offset = o
 
 	case reflect.Uint32:
 		b, o := d.read_s4(offset)
 		v := binary.LittleEndian.Uint32(b)
-		st.Set(reflect.ValueOf(v))
+		rv.Set(reflect.ValueOf(v))
 		// update
 		offset = o
 
@@ -255,14 +255,14 @@ func (d *deserializer) deserialize(st reflect.Value, offset uint32) (uint32, err
 		b, o := d.read_s4(offset)
 		_v := binary.LittleEndian.Uint32(b)
 		v := uint(_v)
-		st.Set(reflect.ValueOf(v))
+		rv.Set(reflect.ValueOf(v))
 		// update
 		offset = o
 
 	case reflect.Uint64:
 		b, o := d.read_s8(offset)
 		v := binary.LittleEndian.Uint64(b)
-		st.SetUint(v)
+		rv.SetUint(v)
 		// update
 		offset = o
 
@@ -271,7 +271,7 @@ func (d *deserializer) deserialize(st reflect.Value, offset uint32) (uint32, err
 		b, o := d.read_s4(offset)
 		_v := binary.LittleEndian.Uint32(b)
 		v := math.Float32frombits(_v)
-		st.Set(reflect.ValueOf(v))
+		rv.Set(reflect.ValueOf(v))
 		// update
 		offset = o
 
@@ -280,16 +280,16 @@ func (d *deserializer) deserialize(st reflect.Value, offset uint32) (uint32, err
 		b, o := d.read_s8(offset)
 		_v := binary.LittleEndian.Uint64(b)
 		v := math.Float64frombits(_v)
-		st.Set(reflect.ValueOf(v))
+		rv.Set(reflect.ValueOf(v))
 		// update
 		offset = o
 
 	case reflect.Bool:
 		b, o := d.read_s1(offset)
 		if b == 0x01 {
-			st.SetBool(true)
+			rv.SetBool(true)
 		} else if b == 0x00 {
-			st.SetBool(false)
+			rv.SetBool(false)
 		}
 		// update
 		offset = o
@@ -298,12 +298,12 @@ func (d *deserializer) deserialize(st reflect.Value, offset uint32) (uint32, err
 		b, o := d.read_s4(offset)
 		l := binary.LittleEndian.Uint32(b)
 		v := string(d.data[o : o+l])
-		st.SetString(v)
+		rv.SetString(v)
 		// update
 		offset = o + l
 
 	case reflect.Struct:
-		if isDateTimeOffset(st) {
+		if isDateTimeOffset(rv) {
 			b, o1 := d.read_s8(offset)
 			seconds := binary.LittleEndian.Uint64(b)
 			b, o2 := d.read_s4(o1)
@@ -312,23 +312,23 @@ func (d *deserializer) deserialize(st reflect.Value, offset uint32) (uint32, err
 			offMin := binary.LittleEndian.Uint16(b)
 
 			v := Unix(int64(seconds)-int64(offMin*60), int64(nanos))
-			st.Set(reflect.ValueOf(v))
+			rv.Set(reflect.ValueOf(v))
 			// update
 			offset = o3
 
-		} else if isDateTime(st) {
+		} else if isDateTime(rv) {
 			b, o1 := d.read_s8(offset)
 			seconds := binary.LittleEndian.Uint64(b)
 			b, o2 := d.read_s4(o1)
 			nanos := binary.LittleEndian.Uint32(b)
 			v := time.Unix(int64(seconds), int64(nanos))
 
-			st.Set(reflect.ValueOf(v))
+			rv.Set(reflect.ValueOf(v))
 			// update
 			offset = o2
 		} else {
-			for i := 0; i < st.NumField(); i++ {
-				offset, err = d.deserialize(st.Field(i), offset)
+			for i := 0; i < rv.NumField(); i++ {
+				offset, err = d.deserialize(rv.Field(i), offset)
 				if err != nil {
 					return 0, err
 				}
@@ -337,7 +337,7 @@ func (d *deserializer) deserialize(st reflect.Value, offset uint32) (uint32, err
 
 	case reflect.Slice:
 		// element type
-		e := st.Type().Elem()
+		e := rv.Type().Elem()
 
 		// length
 		b, offset := d.read_s4(offset)
@@ -349,7 +349,7 @@ func (d *deserializer) deserialize(st reflect.Value, offset uint32) (uint32, err
 		}
 
 		o := offset
-		tmpSlice := reflect.MakeSlice(st.Type(), l, l)
+		tmpSlice := reflect.MakeSlice(rv.Type(), l, l)
 
 		for i := 0; i < l; i++ {
 			v := reflect.New(e).Elem()
@@ -360,14 +360,14 @@ func (d *deserializer) deserialize(st reflect.Value, offset uint32) (uint32, err
 
 			tmpSlice.Index(i).Set(v)
 		}
-		st.Set(tmpSlice)
+		rv.Set(tmpSlice)
 
 		// update
 		offset = o
 
 	case reflect.Array:
 		// element type
-		e := st.Type().Elem()
+		e := rv.Type().Elem()
 
 		// length
 		b, offset := d.read_s4(offset)
@@ -377,8 +377,8 @@ func (d *deserializer) deserialize(st reflect.Value, offset uint32) (uint32, err
 		if l < 0 {
 			return offset, nil
 		}
-		if l != st.Len() {
-			return 0, fmt.Errorf("Array Length is different : data[%d] array[%d]", l, st.Len())
+		if l != rv.Len() {
+			return 0, fmt.Errorf("Array Length is different : data[%d] array[%d]", l, rv.Len())
 		}
 
 		o := offset
@@ -388,20 +388,20 @@ func (d *deserializer) deserialize(st reflect.Value, offset uint32) (uint32, err
 			if err != nil {
 				return 0, err
 			}
-			st.Index(i).Set(v)
+			rv.Index(i).Set(v)
 		}
 
 		// update
 		offset = o
 
 	case reflect.Ptr:
-		e := st.Type().Elem()
+		e := rv.Type().Elem()
 		v := reflect.New(e).Elem()
 		offset, err = d.deserialize(v, offset)
-		st.Set(v.Addr())
+		rv.Set(v.Addr())
 
 	default:
-		err = errors.New(fmt.Sprint("this type is not supported : ", st.Type()))
+		err = errors.New(fmt.Sprint("this type is not supported : ", rv.Type()))
 	}
 
 	return offset, err
