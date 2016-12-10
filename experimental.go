@@ -2,12 +2,12 @@ package experimental
 
 import (
 	"encoding/binary"
+	"errors"
 	"fmt"
 	"math"
 	"reflect"
 	"time"
 	"unicode/utf16"
-	"errors"
 )
 
 type Char rune
@@ -54,38 +54,42 @@ func Deserialize(holder interface{}, data []byte) error {
 		t = t.Elem()
 	}
 
-	// Struct
+	// byte to Struct
 	if t.Kind() == reflect.Struct && !isDateTime(t) && !isDateTimeOffset(t) {
 		return ds.deserializeStruct(t)
 	}
-	// Primitive?
-	//if isPrimitive(t) {
 
+	// byte to primitive
 	_, err := ds.deserialize(t, 0)
 	return err
-	//}
-
-	//return nil
 }
 
 func (d *deserializer) deserializeStruct(t reflect.Value) error {
 	dataLen := len(d.data)
 	if dataLen < minStructDataSize {
-		return fmt.Errorf("data size is not enough: %s", dataLen)
+		return fmt.Errorf("data size is not enough: %d", dataLen)
 	}
+
+	// data lookup
+	offset := uint32(0)
+
 	// size
-	b, _ := d.read_s4(0)
+	b, offset := d.read_s4(offset)
 	size := binary.LittleEndian.Uint32(b)
 	if size != uint32(dataLen) {
-		return fmt.Errorf("data size is wrong [%s != %s]", size, dataLen)
+		return fmt.Errorf("data size is wrong [ %d : %d ]", size, dataLen)
 	}
 
 	// index
-	// todo : implement
+	b, offset = d.read_s4(offset)
+	dataIndex := binary.LittleEndian.Uint32(b)
+	if dataIndex != uint32(t.NumField()-1) {
+		return fmt.Errorf("data index is diffrent [ %d : %d ]", dataIndex, t.NumField()-1)
+	}
 
 	for i := 0; i < t.NumField(); i++ {
-		indexOffset := 8 + i*4
-		dataOffset := binary.LittleEndian.Uint32(d.data[indexOffset : indexOffset+4])
+		b, offset = d.read_s4(offset)
+		dataOffset := binary.LittleEndian.Uint32(b)
 		if _, err := d.deserialize(t.Field(i), dataOffset); err != nil {
 			return err
 		}
@@ -125,29 +129,6 @@ func isChar(value reflect.Value) bool {
 	i := value.Interface()
 	switch i.(type) {
 	case Char:
-		return true
-	}
-	return false
-}
-
-func isPrimitive(value reflect.Value) bool {
-	switch value.Kind() {
-	case
-		reflect.Int,
-		reflect.Int8,
-		reflect.Int16,
-		reflect.Int32,
-		reflect.Int64,
-		reflect.Uint,
-		reflect.Uint8,
-		reflect.Uint16,
-		reflect.Uint32,
-		reflect.Uint64,
-		reflect.Float32,
-		reflect.Float64,
-		reflect.Bool,
-		reflect.String:
-		// TODO : datetime etc...
 		return true
 	}
 	return false
