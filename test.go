@@ -1,5 +1,0 @@
-package experimental
-
-func Fuga() {
-
-}
