@@ -26,3 +26,5 @@ _testmain.go
 # Editor
 *.iml
 .idea
+
+vendor
