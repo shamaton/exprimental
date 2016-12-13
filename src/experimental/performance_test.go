@@ -7,6 +7,11 @@ import (
 	msgpack "gopkg.in/vmihailenco/msgpack.v2"
 )
 
+type BenchChild struct {
+	Int    int
+	String string
+}
+
 type BenchMarkStruct struct {
 	Int    int
 	Uint   uint
@@ -14,6 +19,8 @@ type BenchMarkStruct struct {
 	Double float64
 	Bool   bool
 	String string
+	Array  []int
+	Child  BenchChild
 }
 
 var s = BenchMarkStruct{
@@ -23,7 +30,12 @@ var s = BenchMarkStruct{
 	Double: 6.789,
 	Bool:   true,
 	String: "this is text.",
+	Array:  []int{1, 2, 3, 4, 5, 6, 7, 8, 9},
+	Child:  BenchChild{Int: 12345, String: "this is struct of child"},
 }
+
+var zeroData, _ = zeroformatter.Serialize(s)
+var msgData, _ = msgpack.Marshal(s)
 
 func BenchmarkPackZeroformatter(b *testing.B) {
 	for n := 0; n < b.N; n++ {
@@ -44,23 +56,18 @@ func BenchmarkPackMsgpack(b *testing.B) {
 }
 
 func BenchmarkUnpackZeroformatter(b *testing.B) {
-	d, _ := zeroformatter.Serialize(s)
-
 	for n := 0; n < b.N; n++ {
 		t := BenchMarkStruct{}
-		if err := zeroformatter.Deserialize(&t, d); err != nil {
+		if err := zeroformatter.Deserialize(&t, zeroData); err != nil {
 			b.Fatal(err)
 		}
 	}
 }
 
 func BenchmarkUnpackMsgpack(b *testing.B) {
-
-	d, _ := msgpack.Marshal(s)
-
 	for n := 0; n < b.N; n++ {
 		t := BenchMarkStruct{}
-		if err := msgpack.Unmarshal(d, &t); err != nil {
+		if err := msgpack.Unmarshal(msgData, &t); err != nil {
 			b.Fatal(err)
 		}
 	}
