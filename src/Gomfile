@@ -1,1 +1,2 @@
 gom 'github.com/shamaton/zeroformatter', :branch => 'dev'
+gom 'gopkg.in/vmihailenco/msgpack.v2'
