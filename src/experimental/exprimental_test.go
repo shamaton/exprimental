@@ -285,7 +285,7 @@ func TestStruct(t *testing.T) {
 }
 
 func checkRoutine(holder interface{}, answer interface{}, fileName string) error {
-	d, err := fileToBytes(fileName)
+	d, err := fileToBytes("zeroformatter/" + fileName)
 	if err != nil {
 		return err
 	}
