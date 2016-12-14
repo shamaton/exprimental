@@ -24,14 +24,14 @@ type BenchMarkStruct struct {
 }
 
 var s = BenchMarkStruct{
-	Int:    123,
+	Int:    -123,
 	Uint:   456,
 	Float:  1.234,
 	Double: 6.789,
 	Bool:   true,
 	String: "this is text.",
 	Array:  []int{1, 2, 3, 4, 5, 6, 7, 8, 9},
-	Child:  BenchChild{Int: 12345, String: "this is struct of child"},
+	Child:  BenchChild{Int: 123456, String: "this is struct of child"},
 }
 
 var zeroData, _ = zeroformatter.Serialize(s)
