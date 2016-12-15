@@ -95,7 +95,7 @@ func TestCheck(t *testing.T) {
 	}
 	t.Log(msgSt)
 
-	zeroData, err := zeroformatter.Serialize2(s)
+	zeroData, err := zeroformatter.Serialize(s)
 	if err != nil {
 		t.Error(err)
 	}
