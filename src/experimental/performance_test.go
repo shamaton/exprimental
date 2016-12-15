@@ -75,13 +75,17 @@ func BenchmarkUnpackMsgpack(b *testing.B) {
 
 func TestCheck(t *testing.T) {
 
-	/*
-		d, err := fileToBytes("msgpack/" + "Comparison.pack")
-		if err != nil {
-			t.Error(err)
-		}
-		t.Log(d)
-	*/
+	d, err := fileToBytes("zeroformatter/" + "MapInt.pack")
+	if err != nil {
+		t.Error(err)
+	}
+	t.Log(d)
+
+	dd, err := fileToBytes("zeroformatter/" + "MapString.pack")
+	if err != nil {
+		t.Error(err)
+	}
+	t.Log(dd)
 
 	msgData, err := msgpack.Marshal(s)
 	if err != nil {
