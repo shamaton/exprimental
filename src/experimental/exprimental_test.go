@@ -180,6 +180,20 @@ func TestArray(t *testing.T) {
 
 }
 
+func TestMap(t *testing.T) {
+	mpInt := map[int]int{}
+	mpIntAns := map[int]int{1: 2, 3: 4}
+	if err := checkRoutine(&mpInt, &mpIntAns, "MapInt.pack"); err != nil {
+		t.Error(err)
+	}
+
+	mpStr := map[string]string{}
+	mpStrAns := map[string]string{"one": "two", "three": "four", "five": "six"}
+	if err := checkRoutine(&mpStr, &mpStrAns, "MapString.pack"); err != nil {
+		t.Error(err)
+	}
+}
+
 func TestStruct(t *testing.T) {
 
 	type Struct struct {
