@@ -3,6 +3,9 @@ package experimental
 import (
 	"testing"
 
+	"fmt"
+	"reflect"
+
 	"github.com/shamaton/zeroformatter"
 	msgpack "gopkg.in/vmihailenco/msgpack.v2"
 )
@@ -20,7 +23,8 @@ type BenchMarkStruct struct {
 	Bool   bool
 	String string
 	Array  []int
-	Map    map[string]int
+	Map    map[string]string
+	Map2   map[string]string
 	Child  BenchChild
 }
 
@@ -32,7 +36,8 @@ var s = BenchMarkStruct{
 	Bool:   true,
 	String: "this is text.",
 	Array:  []int{1, 2, 3, 4, 5, 6, 7, 8, 9},
-	Map:    map[string]int{}, //map[string]int{"this": 1, "is": 2, "map": 3},
+	Map:    map[string]string{"this": "1", "is": "2", "map": "3"},
+	Map2:   map[string]string{"this": "4", "is": "5", "map2": "6"},
 	Child:  BenchChild{Int: 123456, String: "this is struct of child"},
 }
 
@@ -50,6 +55,26 @@ func BenchmarkMMM(b *testing.B) {
 		if _, err := zeroformatter.Serialize(aaa); err != nil {
 			b.Fatal(err)
 		}
+	}
+}
+
+func _BenchmarkAAA(b *testing.B) {
+	a := []int{}
+	for n := 0; n < b.N; n++ {
+		a = append(a, n)
+	}
+}
+
+func _BenchmarkBBB(b *testing.B) {
+	a := make([]int, 0, b.N)
+	for n := 0; n < b.N; n++ {
+		a = append(a, n)
+	}
+}
+func _BenchmarkCCC(b *testing.B) {
+	a := make([]int, b.N, b.N)
+	for n := 0; n < b.N; n++ {
+		a[n] = n
 	}
 }
 
@@ -105,6 +130,52 @@ func BenchmarkUnpackMsgpack(b *testing.B) {
 
 func TestCheck(t *testing.T) {
 
+	type hoge struct {
+		A int
+		B int
+	}
+	ab := hoge{}
+	abr := reflect.ValueOf(&ab)
+	abr = abr.Elem()
+
+	rr := reflect.ValueOf(&ab.A)
+	rr = rr.Elem()
+
+	for i := 0; i < abr.NumField(); i++ {
+		t := abr.Field(i)
+		if reflect.DeepEqual(t.Addr(), rr.Addr()) {
+			fmt.Println("correct!!")
+		}
+
+		ta := t.Addr()
+		ra := rr.Addr()
+		fmt.Println(t.Addr().Pointer(), ra.Pointer())
+		if ta.Pointer() == ra.Pointer() {
+			fmt.Println("correct2!!")
+		}
+	}
+	fmt.Println(rr.Addr())
+
+	sha := hoge{
+		A: 1234,
+		B: 5678,
+	}
+	shab, err := zeroformatter.Serialize(sha)
+	if err != nil {
+		t.Error(err)
+	}
+
+	shasha := hoge{}
+	dds, err := zeroformatter.DelayDeserialize(&shasha, shab)
+	if err != nil {
+		t.Error(err)
+	}
+	err = dds.DeserializeByElement(&shasha.B)
+	if err != nil {
+		t.Error(err)
+	}
+	t.Log(shasha)
+
 	/*
 		d, err := fileToBytes("zeroformatter/" + "MapInt.pack")
 		if err != nil {
@@ -118,6 +189,23 @@ func TestCheck(t *testing.T) {
 		}
 		t.Log(dd)
 	*/
+
+	type Struct struct {
+		String string
+	}
+	h := Struct{String: "zeroformatter"}
+
+	d, err := zeroformatter.Serialize(h)
+	if err != nil {
+		// log.Fatal(err)
+		t.Error(err)
+	}
+	r := Struct{}
+	err = zeroformatter.Deserialize(&r, d)
+	if err != nil {
+		t.Error(err)
+	}
+	t.Log(r)
 
 	msgData, err := msgpack.Marshal(s)
 	if err != nil {
