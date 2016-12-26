@@ -119,6 +119,15 @@ func BenchmarkUnpackZeroformatter(b *testing.B) {
 	}
 }
 
+func BenchmarkUnpackZeroformatterDelay(b *testing.B) {
+	for n := 0; n < b.N; n++ {
+		t := BenchMarkStruct{}
+		if _, err := zeroformatter.DelayDeserialize(&t, zeroData); err != nil {
+			b.Fatal(err)
+		}
+	}
+}
+
 func BenchmarkUnpackMsgpack(b *testing.B) {
 	for n := 0; n < b.N; n++ {
 		t := BenchMarkStruct{}
@@ -170,12 +179,31 @@ func TestCheck(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	err = dds.DeserializeByElement(&shasha.B)
+	/*
+		err = dds.DeserializeByElement(&shasha.B, &shasha.A)
+		if err != nil {
+			t.Error(err)
+		}
+	*/
+	err = dds.DeserializeByIndex(1, 0)
 	if err != nil {
 		t.Error(err)
 	}
+
+	// test case
+	/*
+		var DummyA int
+		err = dds.DeserializeByElement(&DummyA)
+		if err != nil {
+			t.Error(err)
+		}
+	*/
+
 	t.Log(shasha)
 
+	if ans, err := dds.IsDeserialized(&shasha.B); ans && err == nil {
+		t.Log("is deserialzed")
+	}
 	/*
 		d, err := fileToBytes("zeroformatter/" + "MapInt.pack")
 		if err != nil {
