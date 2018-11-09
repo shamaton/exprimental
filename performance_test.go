@@ -1,12 +1,13 @@
 package experimental
 
 import (
-	"testing"
-
 	"fmt"
 	"reflect"
+	"testing"
+	"time"
 
 	"github.com/shamaton/zeroformatter"
+	"github.com/shamaton/zeroformatter/datetimeoffset"
 	msgpack "gopkg.in/vmihailenco/msgpack.v2"
 )
 
@@ -132,6 +133,36 @@ func BenchmarkUnpackMsgpack(b *testing.B) {
 	for n := 0; n < b.N; n++ {
 		t := BenchMarkStruct{}
 		if err := msgpack.Unmarshal(msgData, &t); err != nil {
+			b.Fatal(err)
+		}
+	}
+}
+
+func BenchmarkDuration(b *testing.B) {
+	a := time.Duration(1)
+
+	for n := 0; n < b.N; n++ {
+		if _, err := zeroformatter.Serialize(a); err != nil {
+			b.Fatal(err)
+		}
+	}
+}
+
+func BenchmarkDateTimeOffset(b *testing.B) {
+	a := datetimeoffset.Now()
+
+	for n := 0; n < b.N; n++ {
+		if _, err := zeroformatter.Serialize(a); err != nil {
+			b.Fatal(err)
+		}
+	}
+}
+
+func BenchmarkDateTime(b *testing.B) {
+	a := time.Now()
+
+	for n := 0; n < b.N; n++ {
+		if _, err := zeroformatter.Serialize(a); err != nil {
 			b.Fatal(err)
 		}
 	}
