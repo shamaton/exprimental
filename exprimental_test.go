@@ -314,7 +314,7 @@ func checkRoutine(holder interface{}, answer interface{}, fileName string) error
 
 func fileToBytes(fileName string) ([]byte, error) {
 
-	file, err := os.Open("../../pack/" + fileName)
+	file, err := os.Open("pack/" + fileName)
 	defer file.Close()
 	if err != nil {
 		return emptyByte, err
